@@ -225,9 +225,19 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 	}
 
 	char *response;//raw response string, returned from ftp_receive
-	struct ftp_response *curr_res,*prev_res=NULL;
+	struct ftp_response *curr_res;
 	*fres = NULL; 
 	
+
+	if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL)
+	{
+		log_error("ftp_command: malloc failed.");
+		return -1;
+	} 
+	
+	*fres = curr_res;//head
+	curr_res->message = NULL;
+
 
 	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
 	{
@@ -270,8 +280,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 		*new_line = '\0';
 		
 
-		if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL || 
-			(curr_res->message = (char *)malloc(new_line-curr_line))==NULL)
+		if((curr_res->message = (char *)malloc(new_line-curr_line))==NULL)
 		{
 			log_error("ftp_command: malloc() failed.");
 			return -1;
@@ -286,25 +295,26 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 		}
 
 		snprintf(curr_res->message,new_line-curr_line-4,"%s",curr_line+4);
-		curr_res->next = NULL;	
-
-		if(!prev_res)
-		{
-			//head node
-			*fres      = curr_res;
-			prev_res   = curr_res;
-		}
-		else
-		{
-			//connect with previos node
-			prev_res->next = curr_res;
-			prev_res       = curr_res;
-		}
 
 		curr_line = new_line + 1;
 		new_line=strchr(curr_line,'\n');
 
-	}while(new_line != NULL);
+		if(new_line != NULL)
+		{
+			if((curr_res->next = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL) 
+			{
+				log_error("ftp_command: malloc () failed.");
+				return -1;
+			}
+			curr_res = curr_res->next;
+			curr_res->message = NULL;
+		}
+		else//no more '/n' 
+		{
+			break;
+		}
+	
+	}while(1);
 	
 	
 	
@@ -325,11 +335,7 @@ int ftp_command_str(char **cstr,const char *command,const char *arguments)
 	if(!(*cstr))
 		return -1;
 
-	(*cstr)[0]='\0';
-	strcat(*cstr,command);
-	strcat(*cstr," ");
-	strcat(*cstr,arguments);
-	strcat(*cstr,"\n");	
+	snprintf(*cstr,strlen(command)+strlen(arguments)+3,"%s %s\n",command,arguments);
 
 	return 0;
 
