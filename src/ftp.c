@@ -1,0 +1,337 @@
+#include "ftp.h"
+#include "utils/log.h"
+#include "stdlib.h"
+#include "string.h"
+#include "errno.h"
+#include "stdio.h"
+#include "unistd.h"
+
+
+
+int ftp_server_info(const char *server_name,const char *server_port,struct ftp_server **ftps)
+{
+	//fills struct ftp_server with server information
+	//return value
+	// 0 - success
+	// -1 - failed
+
+
+
+
+	struct addrinfo hints;
+	memset(&hints,0,sizeof hints);
+	
+	hints.ai_family   = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags	  = AI_CANONNAME;
+
+	if((*ftps = (struct ftp_server *)malloc(sizeof(struct ftp_server)))== NULL)
+	{	
+		log_error("ftp_server_info: malloc() failed.");
+		return -1;
+	}
+	(*ftps)->server_status =  0;
+	(*ftps)->cc_socket     = -1;	
+	(*ftps)->dc_socket     = -1;
+	(*ftps)->dc_info       = NULL;
+	
+
+	if(getaddrinfo(server_name,server_port,&hints,&((*ftps)->cc_info)))
+	{
+		log_error("ftp_server_info: getaddrinfo() failed.");
+		return -1; 
+	}
+
+	return 0;
+	
+}
+
+void ftp_server_free(struct ftp_server *ftps)
+{
+	if(ftps->server_status & FTPS_CONTROL_CONNECTED)
+		close(ftps->cc_socket);
+	if(ftps->server_status & FTPS_DATA_CONNECTED)
+		close(ftps->dc_socket);
+
+
+	
+	freeaddrinfo(ftps->dc_info);
+	freeaddrinfo(ftps->cc_info);
+	free(ftps);
+}
+
+void ftp_response_free(struct ftp_response *fres)
+{
+	if(fres->message)
+		free(fres->message);
+	if(fres)
+		free(fres);
+}
+void ftp_fs_free(struct ftp_fs *ftfs)
+{
+	struct ftp_file *fifi;
+	fifi = ftfs->files;
+	while(fifi->next)
+	{
+		if(fifi->next->name)
+			free(fifi->next->name);
+		if(fifi->next->type)
+			free(fifi->next->type);
+		fifi = fifi->next;
+	
+	}
+	if(fifi)
+		free(fifi);
+	if(ftfs)
+		free(ftfs);
+}
+
+
+
+int ftp_connect(struct addrinfo *server_info,int *socket_fd)
+{
+	//attempts a connection to the ftp server
+	//return value:
+	// 0 - success
+	// -1- failed
+
+	if((*socket_fd = socket(server_info->ai_family,
+					server_info->ai_socktype,
+						server_info->ai_protocol)) == -1)
+	{
+		log_error("ftp_connect: socket() failed.");
+		return -1;
+	}
+
+	if(connect(*socket_fd,server_info->ai_addr,server_info->ai_addrlen) == -1)
+	{
+		char buf[16];
+		sprintf(buf,"errno: %d",errno);
+		log_error("ftp_connect: connect() failed.");
+		log_error(buf);
+		return -1;
+	}
+	
+	log_message("Ftp server connected.");
+	return 0;	
+}
+
+int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
+{
+	//attempts to send a message over socket
+	//return value:
+	//0 - succes
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftp_send:ftp_server not connected.");
+		return -1;
+	}
+	
+
+	int flags = 0,bytes_sent;
+
+	if((bytes_sent=send(socket_fd,msg,strlen(msg),flags))==-1)
+	{
+		char buf[16];
+		sprintf(buf,"errno: %d",errno);
+		log_error("ftp_send: send() failed.");
+		log_error(buf);
+		return -1;
+
+	}
+	//log_message(msg);
+	return 0;
+
+}
+int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
+{
+	//attempts to receive a message over socket
+	//return value:
+	//0 - succes
+	//-1- failed
+
+	
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftp_receive:ftp_server not connected.");
+		return -1;
+	}
+
+	int flags=0,
+		buff_size=0,//total number of bytes received
+			rcv_size=256,//recv stream size
+				bytes_received;//actual number of bytes received
+
+
+	*buffer = (char *)malloc(rcv_size);
+	
+	char *buff = *buffer;
+	memset(buff,0,rcv_size);
+	
+	do
+	{
+		if((bytes_received=recv(socket_fd,buff+buff_size,rcv_size,flags))==-1)
+		{
+			char buf[16];
+			sprintf(buf,"errno: %d",errno);
+			log_error("ftp_receive: recv() failed.");
+			log_error(buf);
+			return -1;
+		}
+		buff_size += bytes_received;
+		if((buff = (char*) realloc(buff,buff_size+rcv_size))==NULL)//expand buffer for
+										//next recv
+		{
+			log_error("ftp_receive: realloc() failed.");
+			return -1;
+		}
+
+	 }while(buff[buff_size-1]!='\n' && buff[buff_size-2] != '\r');
+	//roll until '\r''\n' is found at the end, or timed out
+
+	//}while(bytes_received==rcv_size);//do while recv returns full buffer 
+
+	
+	if((buff = (char*) realloc(buff,buff_size+1))==NULL)//scale buffer down
+	{
+			log_error("ftp_receive: realloc() scaling down failed.");
+			return -1;
+	}
+	buff[buff_size] = '\0';
+	//log_message(buff);
+	
+	return 0;
+
+
+
+}
+
+
+int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *command)
+{
+	//sends command to ftp_server,and receives response
+	//return value:
+	//0 - succes
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftp_command:ftp_server not connected.");
+		return -1;
+	}
+
+	char *response;//raw response string, returned from ftp_receive
+	struct ftp_response *curr_res,*prev_res=NULL;
+	*fres = NULL; 
+	
+
+	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
+	{
+		log_error("ftp_command: ftp_send() failed.");
+		return -1;
+	}
+	
+	if(ftp_receive(ftps,ftps->cc_socket,&response) == -1)
+	{
+	
+		log_error("ftp_command: ftp_receive() failed.");
+		return -1;
+	}
+
+	
+	//first 3 characters of the response are 
+	// digits representing FTP response code,rest is the response text
+
+	//if the 4th character is '-'response is multi-line, 
+	//and will continue until the first line where
+	//the 4th character is space ' '
+
+
+	char *curr_line,
+		*new_line;
+
+	curr_line = response;
+	
+	if((new_line=strchr(curr_line,'\n'))==NULL)//new_line at first instance of '\n'
+	{
+		log_error("ftp_command: response not terminated");
+		return -1;
+	}
+
+
+
+	do//line by line, separating code and text
+	{
+	
+		*new_line = '\0';
+		
+
+		if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL || 
+			(curr_res->message = (char *)malloc(new_line-curr_line))==NULL)
+		{
+			log_error("ftp_command: malloc() failed.");
+			return -1;
+		}
+	
+		curr_res->code = strtol(curr_line,NULL,10);	
+		
+		if(curr_res->code < 100 || curr_res->code > 999)
+		{
+			log_error("ftp_command: wrong code format.");
+			return -1;
+		}
+
+		snprintf(curr_res->message,new_line-curr_line-4,"%s",curr_line+4);
+		curr_res->next = NULL;	
+
+		if(!prev_res)
+		{
+			//head node
+			*fres      = curr_res;
+			prev_res   = curr_res;
+		}
+		else
+		{
+			//connect with previos node
+			prev_res->next = curr_res;
+			prev_res       = curr_res;
+		}
+
+		curr_line = new_line + 1;
+		new_line=strchr(curr_line,'\n');
+
+	}while(new_line != NULL);
+	
+	
+	
+	return 0;
+}
+
+
+int ftp_command_str(char **cstr,const char *command,const char *arguments)
+{
+	//creates command string
+	//return value
+	//0  - success
+	//-1 - failed
+
+
+	*cstr = (char *)malloc(strlen(command)+strlen(arguments)+3);
+
+	if(!(*cstr))
+		return -1;
+
+	(*cstr)[0]='\0';
+	strcat(*cstr,command);
+	strcat(*cstr," ");
+	strcat(*cstr,arguments);
+	strcat(*cstr,"\n");	
+
+	return 0;
+
+}
+
