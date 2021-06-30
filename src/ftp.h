@@ -14,6 +14,10 @@
 #define FTPS_DATA_CONNECTED	 4
 #define FTPS_LOGGED_IN		 8
 
+
+#define FTP_TYPE_ASCII   26
+#define FTP_TYPE_BINARY  7
+
 struct ftp_server
 {
 	struct addrinfo *cc_info;//control connection info

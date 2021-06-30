@@ -276,6 +276,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 		ftp_response_free(fres);
 		return -1;
 	}
+	free(command_str);
 
 	if(fres->code != 257)
 	{		
@@ -335,3 +336,65 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 
 }
 
+int ftpc_type(struct ftp_server *ftps,const int type)
+{
+	//attemps TYPE command,
+	//tells the server in what format to transmit files
+	//return valie
+	//0 - success
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftpc_type:ftp_server not connected.");
+		return -1;
+	}
+
+	if(!(ftps->server_status & FTPS_LOGGED_IN))
+	{
+		log_error("ftpc_type:user not logged in.");
+		return -1;
+	}
+
+	char *command_str,
+			type_str[32]={'\0'};
+	struct ftp_response *fres;
+	
+	switch(type)
+	{
+		case FTP_TYPE_ASCII:
+			snprintf(type_str,32,"%s","A");
+			break;
+	
+		case FTP_TYPE_BINARY:
+			snprintf(type_str,32,"%s","I");
+			break;
+		default:	
+			log_error("ftcp_type: non existant type.");
+			return -1;
+	}
+
+	if(ftp_command_str(&command_str,"TYPE",type_str) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_type: TYPE command failed.");
+		free(command_str);
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	char buf[16];
+        snprintf(buf,16,"code: %d",fres->code);
+        log_message("ftpc_type: command TYPE sent.");
+        log_message(buf);
+        log_message(fres->message);
+		
+	
+
+	free(command_str);
+	ftp_response_free(fres);
+
+	return 0;
+}
