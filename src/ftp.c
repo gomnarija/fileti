@@ -169,12 +169,12 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
 
 	*buffer = (char *)malloc(rcv_size);
 	
-	char *buff = *buffer;
-	memset(buff,0,rcv_size);
+	memset(*buffer,0,rcv_size);
+
 	
 	do
 	{
-		if((bytes_received=recv(socket_fd,buff+buff_size,rcv_size,flags))==-1)
+		if((bytes_received=recv(socket_fd,*buffer+buff_size,rcv_size,flags))==-1)
 		{
 			char buf[16];
 			sprintf(buf,"errno: %d",errno);
@@ -183,25 +183,24 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
 			return -1;
 		}
 		buff_size += bytes_received;
-		if((buff = (char*) realloc(buff,buff_size+rcv_size))==NULL)//expand buffer for
+		if((*buffer = (char*) realloc(*buffer,buff_size+rcv_size))==NULL)//expand buffer for
 										//next recv
 		{
 			log_error("ftp_receive: realloc() failed.");
 			return -1;
 		}
 
-	 }while(buff[buff_size-1]!='\n' && buff[buff_size-2] != '\r');
+	 }while((*buffer)[buff_size-1]!='\n' && (*buffer)[buff_size-2] != '\r');
 	//roll until '\r''\n' is found at the end, or timed out
 
-	//}while(bytes_received==rcv_size);//do while recv returns full buffer 
 
 	
-	if((buff = (char*) realloc(buff,buff_size+1))==NULL)//scale buffer down
+	if((*buffer = (char*) realloc(*buffer,buff_size+1))==NULL)//scale buffer down
 	{
 			log_error("ftp_receive: realloc() scaling down failed.");
 			return -1;
 	}
-	buff[buff_size] = '\0';
+
 	//log_message(buff);
 	
 	return 0;
@@ -211,7 +210,7 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
 }
 
 
-int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *command)
+int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command)
 {
 	//sends command to ftp_server,and receives response
 	//return value:
@@ -221,6 +220,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
 	{
 		log_error("ftp_command:ftp_server not connected.");
+		if(command)free(command);
 		return -1;
 	}
 
@@ -232,6 +232,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 	if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL)
 	{
 		log_error("ftp_command: malloc failed.");
+		if(command)free(command);
 		return -1;
 	} 
 	
@@ -242,8 +243,12 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,const char *c
 	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
 	{
 		log_error("ftp_command: ftp_send() failed.");
+		if(command)free(command);
 		return -1;
-	}
+	
+	}	
+	if(command)free(command);
+
 	
 	if(ftp_receive(ftps,ftps->cc_socket,&response) == -1)
 	{

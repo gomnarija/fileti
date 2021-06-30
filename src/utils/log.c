@@ -35,9 +35,9 @@ void log_log(int log_level,const char *message)
 							log_time.tm_sec))
 		
 	
-			if(fprintf(fp,lvl_msg))//log level
-				if(fprintf(fp,">"))//>
-					fprintf(fp,message);//message
+			if(fprintf(fp,"%s",lvl_msg))//log level
+				if(fprintf(fp,"%s",">"))//>
+					fprintf(fp,"%s",message);//message
 	
 	
 		fprintf(fp,"\n");//new line always

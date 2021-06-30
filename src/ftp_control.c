@@ -30,9 +30,8 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 		return -1;
 	}
 
-	free(command_str);
 
-	if(fres->code == 331)
+	if(fres->code == FTPC_USER_OK)
 	{
 		log_message("ftpc_user: success.");	
 		ftp_response_free(fres);
@@ -79,9 +78,8 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 		return -1;
 	}
 
-	free(command_str);
 
-	if(fres->code == 230)
+	if(fres->code == FTPC_LOGGED_IN)
 	{
 		log_message("ftpc_password: success.");
 		log_message("Logged in.");	
@@ -89,7 +87,8 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 		ftp_response_free(fres);
 		return 0;
 	}
-	else if(fres->code == 430 || fres->code == 530)//some servers return 530
+	else if(fres->code == FTPC_INVALID_CRED 
+		|| fres->code == FTPC_NOT_LOGGED)//some servers return 530
 	{
 		log_error("ftpc_password: wrong credentials");
 		ftp_response_free(fres);
@@ -168,10 +167,9 @@ int ftpc_passive(struct ftp_server *ftps)
 	}
 
 
-	free(command_str);
 
 
-	if(fres->code == 227)
+	if(fres->code == FTPC_PASSIVE_MODE)
 	{
 		//get ip and port from response message
 		//format:
@@ -189,10 +187,12 @@ int ftpc_passive(struct ftp_server *ftps)
 			if(startp-fres->message > strlen(fres->message))
 			{
 				log_error("ftpc_passive: invalid response message.");
+				ftp_response_free(fres);
+				return -1;
 			}
 		}
 
-		ip[0] = strtol(startp,&endp,10);
+		ip[0] = strtol(startp,&endp,10);//finds number, places endp after number
 		ip[1] = strtol(endp+1,&endp,10);//endp+1 to avoid ','
 		ip[2] = strtol(endp+1,&endp,10);
 		ip[3] = strtol(endp+1,&endp,10);
@@ -211,10 +211,10 @@ int ftpc_passive(struct ftp_server *ftps)
 		hints.ai_family   = AF_INET;
 		hints.ai_protocol = IPPROTO_TCP;
 		
-		
 		if(getaddrinfo(ip_str,port_str,&hints,&(ftps->dc_info)))
 		{
 			log_error("ftpc_passive: getaddrinfo() failed.");
+			ftp_response_free(fres);
 			return -1; 
 		}
 		
@@ -259,7 +259,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	
 	if((*ftfs = (struct ftp_fs *)malloc(sizeof(struct ftp_fs)))==NULL)
 	{	
-		log_error("ftpc_pwd:mallo() failed.");
+		log_error("ftpc_pwd:malloc() failed.");
 		return -1;
 	}
 	(*ftfs)->files = NULL;
@@ -276,9 +276,8 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 		ftp_response_free(fres);
 		return -1;
 	}
-	free(command_str);
 
-	if(fres->code != 257)
+	if(fres->code != FTPC_PATH_NAME)
 	{		
 	
 		char buf[16];
@@ -291,7 +290,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 
 
 	//pwd format 
-	//"pwd" some text
+	//"/pwd" some text
 
 	char *startp,*endp;
 	startp = fres->message;
@@ -300,12 +299,15 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 		startp++;
 		if(startp-fres->message > strlen(fres->message))
 		{
-			log_error("ftpc_pwd: response message in wrong format.");
+			log_error("ftpc_pwd: response message is in wrong format.");
+			ftp_response_free(fres);
 			return -1;
 		}
 	}
 
 		
+	//	"/pwd"
+	//	s    e 
 
 
 	endp = startp+1;
@@ -314,7 +316,8 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 		endp++;
 		if(endp-fres->message > strlen(fres->message))
 		{
-			log_error("ftpc_pwd: response message in wrong format.");
+			log_error("ftpc_pwd: response message is in wrong format.");
+			ftp_response_free(fres);
 			return -1;
 		}
 	}
@@ -323,13 +326,17 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 
 	if(((*ftfs)->pwd = (char *)malloc(strlen(startp)))==NULL)
 	{
-		log_error("ftpc_pwd: malloc failed");
+		log_error("ftpc_pwd: malloc() failed");
+		ftp_response_free(fres);
 		return -1;
 	}
+
 	snprintf((*ftfs)->pwd,strlen(startp),"%s",startp+1);
-	
+
+	log_message("ftpc_pwd: success.");
+	log_message((*ftfs)->pwd);
+
 	ftp_response_free(fres);
-	free(command_str);
 
 	return 0;
 
@@ -380,11 +387,10 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 	if(ftp_command(ftps,&fres,command_str)==-1)
 	{
 		log_error("ftpc_type: TYPE command failed.");
-		free(command_str);
 		ftp_response_free(fres);
 		return -1;
 	}
-
+	
 	char buf[16];
         snprintf(buf,16,"code: %d",fres->code);
         log_message("ftpc_type: command TYPE sent.");
@@ -393,7 +399,6 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 		
 	
 
-	free(command_str);
 	ftp_response_free(fres);
 
 	return 0;

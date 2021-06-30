@@ -164,9 +164,8 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
                 return -1;
         }
 	
-        free(command_str);
 
-	if(fres->code != 150)
+	if(fres->code != FTPC_DATA_OPENING)
 	{
 		char buf[16];
                 snprintf(buf,16,"code:%d",fres->code);
@@ -175,6 +174,10 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
                 ftp_response_free(fres);
                 return -1;
 	}
+
+
+
+
 	ftp_response_free(fres);
 	
 	char *buffer,//data connection response
@@ -185,14 +188,14 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 		log_error("ftpd_list: data ftp_receive() failed");
 		return -1;
 	}
-	
 
 	if(ftp_receive(ftps,ftps->cc_socket,&cb) == -1)
 	{
 		log_error("ftpd_list: control ftp_receive() failed");
 		return -1;
 	}
-	if(strtol(cb,NULL,10) != 226)
+
+	if(strtol(cb,NULL,10) != FTPC_DATA_CLOSING)
 	{
 		char buf[16];
                 snprintf(buf,16,"code:%d",fres->code);
@@ -213,7 +216,8 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 		log_error("ftpd_list: can't parse response.");
 		return -1;
 	}
-	
+
+	log_message("ftpd_list: success. ");	
 	free(buffer);
 	return 0;
 }
