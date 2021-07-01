@@ -3,6 +3,8 @@
 
 #include "ftp.h"
 
+int ftpd_connect(struct ftp_server* ,int);
+int ftpd_disconnect(struct ftp_server *);
 int ftpd_list(struct ftp_server *,struct ftp_fs *,const char *);
 
 

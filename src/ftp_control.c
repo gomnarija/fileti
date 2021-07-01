@@ -407,7 +407,7 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 
 int ftpc_connect(struct ftp_server *ftps)
 {
-	//attempst control connection,
+	//attempts control connection,
 	//return value
 	//0 - success
 	//-1- failed
@@ -415,7 +415,7 @@ int ftpc_connect(struct ftp_server *ftps)
 
 	if(ftps->server_status & FTPS_CONTROL_CONNECTED)
 	{
-		log_error("ftpc_connect:ftp_server already connected.");
+		log_warning("ftpc_connect:ftp_server already connected.");
 		return -1;
 	}
 	
@@ -429,7 +429,7 @@ int ftpc_connect(struct ftp_server *ftps)
 
 	//welcome message
 	char *buff;
-	if(ftp_receive(ftps,ftps->cc_socket,&buff) == -1)
+	if(ftp_receive(ftps,ftps->cc_socket,&buff,FTPT_CONTROL) == -1)
 	{	
 		log_error("ftpc_connect:ftp_receive failed.");
 		return -1;
