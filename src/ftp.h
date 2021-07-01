@@ -18,9 +18,12 @@
 #define FTP_TYPE_ASCII  	 26
 #define FTP_TYPE_BINARY 	 7
 
+#define FTPD_ACTIVE		69
+#define FTPD_PASSIVE		70
 
 //response codes
 #define FTPC_DATA_OPENING	150
+#define FTPC_CONTROL_CLOSING	221
 #define FTPC_DATA_CLOSING	226
 #define FTPC_PASSIVE_MODE	227
 #define FTPC_PATH_NAME		257
@@ -28,6 +31,20 @@
 #define FTPC_USER_OK		331
 #define FTPC_INVALID_CRED	430
 #define FTPC_NOT_LOGGED		530
+
+
+#define FTP_TIMEOUT		1000
+
+
+
+//transfer modes
+#define FTPT_CONTROL		600
+#define FTPT_STREAM		601
+#define FTPT_ASCII		602
+#define FTPT_BLOCK		603
+#define FTPT_HASP		604
+
+
 
 struct ftp_server
 {
@@ -67,7 +84,7 @@ int ftp_command(struct ftp_server *,struct ftp_response **,char *);
 int ftp_command_str(char **,const char *,const char*);
 void ftp_fs_free(struct ftp_fs *);
 void ftp_response_free(struct ftp_response *);
-int ftp_receive(struct ftp_server *,int, char **);
+int ftp_receive(struct ftp_server *,int, char **,int);
 int ftp_server_info(const char *,const char *,struct ftp_server **);
 void ftp_server_free(struct ftp_server *);
 int ftp_send(struct ftp_server *,int,const char *);

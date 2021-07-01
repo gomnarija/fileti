@@ -5,7 +5,7 @@
 #include "errno.h"
 #include "stdio.h"
 #include "unistd.h"
-
+#include "poll.h"
 
 
 int ftp_server_info(const char *server_name,const char *server_port,struct ftp_server **ftps)
@@ -95,22 +95,51 @@ int ftp_connect(struct addrinfo *server_info,int *socket_fd)
 	//return value:
 	// 0 - success
 	// -1- failed
-
+	
 	if((*socket_fd = socket(server_info->ai_family,
-					server_info->ai_socktype,
+					server_info->ai_socktype | SOCK_NONBLOCK,
 						server_info->ai_protocol)) == -1)
 	{
 		log_error("ftp_connect: socket() failed.");
 		return -1;
 	}
 
+	
+	struct pollfd pfd;
+	pfd.fd = *socket_fd;
+	pfd.events = POLLOUT;//writing possible
+	pfd.revents = 0;
+	
+
+	
 	if(connect(*socket_fd,server_info->ai_addr,server_info->ai_addrlen) == -1)
 	{
-		char buf[16];
-		sprintf(buf,"errno: %d",errno);
-		log_error("ftp_connect: connect() failed.");
-		log_error(buf);
-		return -1;
+		if(errno != EINPROGRESS)
+		{
+			char buf[16];
+			sprintf(buf,"errno: %d",errno);
+			log_error("ftp_connect: connect() failed.");
+			log_error(buf);
+			return -1;
+		}
+		else
+		{
+			//wait for the connection
+			int rt = poll(&pfd,1,FTP_TIMEOUT);
+			if(rt == 0)//timedout
+			{
+				log_error("ftp_connect: connection timed out.");
+				return -1;
+			}
+			if(rt == -1)
+			{
+				char buf[16];
+				sprintf(buf,"errno: %d",errno);
+				log_error("ftp_connect: poll() failed.");
+				log_error(buf);
+				return -1;
+			}
+		}
 	}
 	
 	log_message("Ftp server connected.");
@@ -146,7 +175,21 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
 	return 0;
 
 }
-int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
+int check_eof(char *buffer,int buff_size,int tmode)
+{
+	switch(tmode)
+	{
+		case FTPT_CONTROL:
+			if(buffer[buff_size-1]=='\n' && buffer[buff_size-2]=='\r')
+				return 1;
+			else
+				return 0;
+		default:
+			return 0;
+	}
+}
+
+int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 {
 	//attempts to receive a message over socket
 	//return value:
@@ -164,42 +207,79 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer)
 	int flags=0,
 		buff_size=0,//total number of bytes received
 			rcv_size=256,//recv stream size
-				bytes_received;//actual number of bytes received
+				bytes_received;//number of bytes received
+	struct pollfd pfd;
+	pfd.fd = socket_fd;
+	pfd.events = POLLIN;//data to be read is in the socket
+	pfd.revents = 0;
 
 
-	*buffer = (char *)malloc(rcv_size);
-	
+	*buffer = (char *)malloc(rcv_size);	
 	memset(*buffer,0,rcv_size);
 
-	
-	do
+	int prt;
+
+	//check if there is something to be read
+	prt=poll(&pfd,1,FTP_TIMEOUT);
+	if(prt == 0 || !(pfd.revents & POLLIN))//timedout or nothing to read
 	{
+
+		log_error("ftp_receive: nothing to receive.");
+		return -1;
+	}
+	else if(prt == -1)
+	{
+		char buf[16];
+		sprintf(buf,"errno: %d",errno);
+		log_error("ftp_receive: poll() failed.");
+		log_error(buf);
+		return -1;
+	}
+
+	
+
+	do
+	{	
+
 		if((bytes_received=recv(socket_fd,*buffer+buff_size,rcv_size,flags))==-1)
 		{
+
+			if(errno == 11)//EAGAIN, temporary busy, try again
+				continue;
+
 			char buf[16];
 			sprintf(buf,"errno: %d",errno);
 			log_error("ftp_receive: recv() failed.");
 			log_error(buf);
+			free(*buffer);
 			return -1;
 		}
+
 		buff_size += bytes_received;
+		if(bytes_read == 0)
+		{
+			log_error("ftps_receive: nothing was read..");
+			return -1;
+		}
+
 		if((*buffer = (char*) realloc(*buffer,buff_size+rcv_size))==NULL)//expand buffer for
-										//next recv
+									//next recv
 		{
 			log_error("ftp_receive: realloc() failed.");
 			return -1;
 		}
 
-	 }while((*buffer)[buff_size-1]!='\n' && (*buffer)[buff_size-2] != '\r');
-	//roll until '\r''\n' is found at the end, or timed out
-
+	}
+	while(!check_eof(*buffer,buff_size,tm));
 
 	
-	if((*buffer = (char*) realloc(*buffer,buff_size+1))==NULL)//scale buffer down
+	if((*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
 	{
 			log_error("ftp_receive: realloc() scaling down failed.");
+			free(*buffer);
 			return -1;
 	}
+
 
 	//log_message(buff);
 	
@@ -250,7 +330,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	if(command)free(command);
 
 	
-	if(ftp_receive(ftps,ftps->cc_socket,&response) == -1)
+	if(ftp_receive(ftps,ftps->cc_socket,&response,FTPT_CONTROL) == -1)
 	{
 	
 		log_error("ftp_command: ftp_receive() failed.");

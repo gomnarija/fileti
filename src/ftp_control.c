@@ -3,6 +3,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "unistd.h"
 
 int ftpc_user(struct ftp_server *ftps,const char *user_name)
 {
@@ -347,7 +348,7 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 {
 	//attemps TYPE command,
 	//tells the server in what format to transmit files
-	//return valie
+	//return value
 	//0 - success
 	//-1- failed
 
@@ -403,3 +404,86 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 
 	return 0;
 }
+
+int ftpc_connect(struct ftp_server *ftps)
+{
+	//attempst control connection,
+	//return value
+	//0 - success
+	//-1- failed
+
+
+	if(ftps->server_status & FTPS_CONTROL_CONNECTED)
+	{
+		log_error("ftpc_connect:ftp_server already connected.");
+		return -1;
+	}
+	
+	if(ftp_connect(ftps->cc_info,&(ftps->cc_socket)) == -1)
+	{
+		log_error("ftpc_connect:connection failed.");
+		return -1;
+	}
+
+	ftps->server_status |= FTPS_CONTROL_CONNECTED;
+
+	//welcome message
+	char *buff;
+	if(ftp_receive(ftps,ftps->cc_socket,&buff) == -1)
+	{	
+		log_error("ftpc_connect:ftp_receive failed.");
+		return -1;
+	}
+	log_message(buff);
+	free(buff);
+
+
+	return 0;
+}
+
+int ftpc_disconnect(struct ftp_server *ftps)
+{
+	//stops control connection,
+	//return value
+	//0 - success
+	//-1- failed
+
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftpc_disconnect:ftp_server not connected.");
+		return -1;
+	}
+
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"QUIT","") == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_disconnect: QUIT command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_CONTROL_CLOSING)
+	{		
+	
+		char buf[16];
+                snprintf(buf,16,"code:%d",fres->code);
+                log_error("ftpc_disconnect: command QUIT failed.");
+		log_error("possible file transfer in progress.");
+                log_error(buf);
+                ftp_response_free(fres);
+                return -1;
+	}
+
+	close(ftps->cc_socket);
+	ftps->server_status ^= FTPS_CONTROL_CONNECTED;	
+	
+	ftp_response_free(fres);
+	return 0;
+}
+
