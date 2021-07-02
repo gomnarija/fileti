@@ -5,7 +5,7 @@
 
 
 
-
+int ftpc_active(struct ftp_server *);
 int ftpc_connect(struct ftp_server *);
 int ftpc_disconnect(struct ftp_server *);
 int ftp_login(struct ftp_server *,const char *,const char *);

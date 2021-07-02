@@ -155,7 +155,7 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 
 
 	//establish data connection
-	if(ftpd_connect(ftps,FTPD_PASSIVE) == -1)
+	if(ftpd_connect(ftps,FTPD_ACTIVE) == -1)
 	{
 		return -1;
 	}
@@ -177,7 +177,13 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	        return -1;
         }
 	
-
+	
+	//temp
+	if(ftp_accept(ftps)==-1)
+	{
+		log_error("ftpd_list: accept failed");
+		return -1;
+	}	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
 		char buf[16];
@@ -186,7 +192,6 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
                 log_error(buf);
                 ftp_response_free(fres);
               
-		ftpd_disconnect(ftps);
 	        return -1;
 	}
 
@@ -252,6 +257,24 @@ int ftpd_connect(struct ftp_server *ftps,int contype)
 	}
 
 
+
+	//active
+	if(contype == FTPD_ACTIVE &&
+		ftpc_active(ftps) != -1)
+	{
+		
+		log_message("ftpd_connect: active connection established.");
+		ftps->server_status |= FTPS_DATA_CONNECTED;	
+		return 0;
+	}
+	else if(contype == FTPD_ACTIVE)
+	{
+		
+		log_error("ftpd_connect: active data connection failed.");
+		return -1;
+	}
+
+
 	//passive
 	if(contype == FTPD_PASSIVE &&
 		ftpc_passive(ftps) != -1 &&
@@ -261,16 +284,16 @@ int ftpd_connect(struct ftp_server *ftps,int contype)
 		ftps->server_status |= FTPS_DATA_CONNECTED;	
 		return 0;
 	}
-	else
+	else if(contype == FTPD_PASSIVE)
 	{
-		log_error("ftpd_connect: failed.");
+		log_error("ftpd_connect: passive data connection failed.");
 		return -1;
 	}
 
-	//active
 
 	return -1;	
 }
+
 
 int ftpd_disconnect(struct ftp_server *ftps)
 {

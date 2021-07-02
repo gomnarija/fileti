@@ -17,8 +17,10 @@ int ftp_server_info(const char *server_name,const char *server_port,struct ftp_s
 
 
 
+	
 
 	struct addrinfo hints;
+
 	memset(&hints,0,sizeof hints);
 	
 	hints.ai_family   = AF_INET;
@@ -35,6 +37,9 @@ int ftp_server_info(const char *server_name,const char *server_port,struct ftp_s
 	(*ftps)->cc_socket     = -1;	
 	(*ftps)->dc_socket     = -1;
 	(*ftps)->dc_info       = NULL;
+	
+	(*ftps)->dc_info = (struct addrinfo *)malloc(sizeof(struct addrinfo));
+	memset((*ftps)->dc_info,0,sizeof(struct addrinfo));
 	
 
 	if(getaddrinfo(server_name,server_port,&hints,&((*ftps)->cc_info)))
@@ -96,9 +101,10 @@ int ftp_connect(struct addrinfo *server_info,int *socket_fd)
 	// 0 - success
 	// -1- failed
 	
-	if((*socket_fd = socket(server_info->ai_family,
-					server_info->ai_socktype | SOCK_NONBLOCK,
-						server_info->ai_protocol)) == -1)
+	if(*socket_fd == -1 && 
+		(*socket_fd = socket(server_info->ai_family,
+				server_info->ai_socktype | SOCK_NONBLOCK,
+					server_info->ai_protocol)) == -1)
 	{
 		log_error("ftp_connect: socket() failed.");
 		return -1;
@@ -181,9 +187,14 @@ int check_eof(char *buffer,int buff_size,int tmode)
 	{
 		case FTPT_CONTROL:
 			if(buffer[buff_size-1]=='\n' && buffer[buff_size-2]=='\r')
+			{
 				return 1;
+				
+			}
 			else
+			{
 				return 0;
+			}
 		default:
 			return 0;
 	}
@@ -197,7 +208,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 	//-1- failed
 
 	
-
 	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
 	{
 		log_error("ftp_receive:ftp_server not connected.");
@@ -218,7 +228,7 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 	memset(*buffer,0,rcv_size);
 
 	int prt;
-
+	
 	//check if there is something to be read
 	prt=poll(&pfd,1,FTP_TIMEOUT);
 	if(prt == 0 || !(pfd.revents & POLLIN))//timedout or nothing to read
@@ -251,12 +261,11 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 			sprintf(buf,"errno: %d",errno);
 			log_error("ftp_receive: recv() failed.");
 			log_error(buf);
-			free(*buffer);
 			return -1;
 		}
 
 		buff_size += bytes_received;
-		if(bytes_read == 0)
+		if(bytes_received == 0)
 		{
 			log_error("ftps_receive: nothing was read..");
 			return -1;
@@ -272,7 +281,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 	}
 	while(!check_eof(*buffer,buff_size,tm));
 
-	
 	if((*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
 	{
 			log_error("ftp_receive: realloc() scaling down failed.");
@@ -426,3 +434,35 @@ int ftp_command_str(char **cstr,const char *command,const char *arguments)
 
 }
 
+int ftp_accept(struct ftp_server *ftps)
+{
+	//accepts pending data connection, if somethign like that exists
+	//return value:
+	//0-success
+	//-1-failed
+	//TODO:threads	
+
+	//probably should do something with this idk :/	
+	socklen_t addrlen = (socklen_t)sizeof (struct sockaddr);
+
+
+
+	int nfd;
+	
+	nfd = accept(ftps->dc_socket,(struct sockaddr*)ftps->dc_info->ai_addr,&addrlen);
+	if(nfd == -1)
+	{
+		log_error("ftp_accept: accept failed. ");
+		return -1;
+	}
+	else
+	{
+		close(ftps->dc_socket);
+		ftps->dc_socket = nfd;	
+	}
+
+	
+	log_message("ftp_accept: server connection accepted. ");
+	return 0;
+	
+}

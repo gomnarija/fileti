@@ -5,6 +5,10 @@
 #include "stdio.h"
 #include "unistd.h"
 
+
+
+
+
 int ftpc_user(struct ftp_server *ftps,const char *user_name)
 {
 	//attempts USER command
@@ -134,9 +138,9 @@ int ftp_login(struct ftp_server *ftps,const char *user_name,const char *password
 
 int ftpc_passive(struct ftp_server *ftps)
 {
-	//attempts initiating passive connection,
+	//attempts to initiate passive connection,
 	//sends PASV command, and waits for port form server
-	//return valie
+	//return value
 	//0 - success
 	//-1- failed
 
@@ -169,61 +173,7 @@ int ftpc_passive(struct ftp_server *ftps)
 
 
 
-
-	if(fres->code == FTPC_PASSIVE_MODE)
-	{
-		//get ip and port from response message
-		//format:
-		//some text (ip1,ip2,ip3,ip4,port1,port2)
-	
-		char *endp,
-			*startp;
-		int ip[4],port[2];	
-
-		startp = fres->message;
-	
-		while(!(*startp >= '1' && *startp <= '9'))//place startp at first digit
-		{
-			startp++;
-			if(startp-fres->message > strlen(fres->message))
-			{
-				log_error("ftpc_passive: invalid response message.");
-				ftp_response_free(fres);
-				return -1;
-			}
-		}
-
-		ip[0] = strtol(startp,&endp,10);//finds number, places endp after number
-		ip[1] = strtol(endp+1,&endp,10);//endp+1 to avoid ','
-		ip[2] = strtol(endp+1,&endp,10);
-		ip[3] = strtol(endp+1,&endp,10);
-	
-		port[0] = strtol(endp+1,&endp,10);
-		port[1] = strtol(endp+1,&endp,10);
-
-		char ip_str[64],port_str[32];
-		snprintf(ip_str,64,"%d.%d.%d.%d",ip[0],ip[1],ip[2],ip[3]);
-		snprintf(port_str,32,"%d",(port[0]*256)+port[1]);
-	
-	
-		struct addrinfo hints;
-		memset(&hints,0,sizeof hints);
-		
-		hints.ai_family   = AF_INET;
-		hints.ai_protocol = IPPROTO_TCP;
-		
-		if(getaddrinfo(ip_str,port_str,&hints,&(ftps->dc_info)))
-		{
-			log_error("ftpc_passive: getaddrinfo() failed.");
-			ftp_response_free(fres);
-			return -1; 
-		}
-		
-		log_message("ftpc_passive: success.");
-		ftp_response_free(fres);
-		return 0;
-	}
-	else
+	if(fres->code != FTPC_PASSIVE_MODE)
 	{
 		
 	
@@ -234,9 +184,62 @@ int ftpc_passive(struct ftp_server *ftps)
 		ftp_response_free(fres);
 		return -1;
 
-	}	
+	}
 	
+	//get ip and port from response message
+	//format:
+	//some text (ip1,ip2,ip3,ip4,port1,port2)
+
+	char *endp,
+		*startp;
+	int ip[4],port[2];	
+
+	startp = fres->message;
+
+	while(!(*startp >= '1' && *startp <= '9'))//place startp at first digit
+	{
+		startp++;
+		if(startp-fres->message > strlen(fres->message))
+		{
+			log_error("ftpc_passive: invalid response message.");
+			ftp_response_free(fres);
+			return -1;
+		}
+	}
+
+	ip[0] = strtol(startp,&endp,10);//finds number, places endp after number
+	ip[1] = strtol(endp+1,&endp,10);//endp+1 to avoid ','
+	ip[2] = strtol(endp+1,&endp,10);
+	ip[3] = strtol(endp+1,&endp,10);
+
+	port[0] = strtol(endp+1,&endp,10);
+	port[1] = strtol(endp+1,&endp,10);
+
+	char ip_str[64],port_str[32];
+	snprintf(ip_str,64,"%d.%d.%d.%d",ip[0],ip[1],ip[2],ip[3]);
+	snprintf(port_str,32,"%d",(port[0]*256)+port[1]);
+
+
+	struct addrinfo hints;
+	memset(&hints,0,sizeof hints);
+	
+	hints.ai_family   = AF_INET;
+	hints.ai_protocol = IPPROTO_TCP;
+	
+	if(getaddrinfo(ip_str,port_str,&hints,&(ftps->dc_info)))
+	{
+		log_error("ftpc_passive: getaddrinfo() failed.");
+		ftp_response_free(fres);
+		return -1; 
+	}
+	
+	log_message("ftpc_passive: success.");
+	ftp_response_free(fres);
+	return 0;
 }
+	
+	
+
 
 int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 {
@@ -392,12 +395,8 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 		return -1;
 	}
 	
-	char buf[16];
-        snprintf(buf,16,"code: %d",fres->code);
         log_message("ftpc_type: command TYPE sent.");
-        log_message(buf);
-        log_message(fres->message);
-		
+	
 	
 
 	ftp_response_free(fres);
@@ -481,9 +480,175 @@ int ftpc_disconnect(struct ftp_server *ftps)
 	}
 
 	close(ftps->cc_socket);
+	ftps->cc_socket = -1;
 	ftps->server_status ^= FTPS_CONTROL_CONNECTED;	
 	
 	ftp_response_free(fres);
 	return 0;
+}
+
+
+int active_str(char **buffer,char *ip,int port)
+{
+	//generates argument str for PORT command
+	//return value:
+	//0-success
+	//-1-failed
+
+	//format
+	//(ip1,ip2,ip3,ip4,port1,port2)
+	//port = (port1 * 256) + port2
+
+	
+	char *p;
+	p = ip;
+	while((p-ip)<strlen(ip))
+	{
+		if(*p=='.')
+			*p=',';
+		p++;
+	}
+
+
+	*buffer = (char *)malloc(strlen(ip) + 3 + 6);
+	snprintf(*buffer,strlen(ip)+3+6,"%s,%d,%d",ip,port >> 8,port-((port>>8)*256));
+	return 0;
+}
+
+int ftpc_active(struct ftp_server *ftps)
+{
+	//attempts to initiate active connection,
+	//sends PORT command with ip and port information
+	//return valie
+	//0 - success
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftpc_active:ftp_server not connected.");
+		return -1;
+	}
+
+	if(!(ftps->server_status & FTPS_LOGGED_IN))
+	{
+		log_error("ftpc_active:user not logged in.");
+		return -1;
+	}
+
+
+	struct sockaddr_in *sok;
+	struct addrinfo hints, *local;//temp, for creating socket
+	memset(&hints,0,sizeof hints);
+	
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	
+	////////////////////////////////////////////////////////////////////
+	if(getaddrinfo(NULL,"0",&hints,&local) == -1)
+	{
+		
+		log_error("ftpc_active: getaddrinfo() failed");
+		return -1;
+	}
+	
+	//listening socket on random port
+	if((ftps->dc_socket = socket(local->ai_family,
+					local->ai_socktype | SOCK_NONBLOCK,
+						local->ai_protocol)) == -1)
+
+	{
+		log_error("ftpc_active: socket() failed");
+		return -1;
+	}
+
+	//get random avaliable port
+	if(bind(ftps->dc_socket,local->ai_addr,local->ai_addrlen) == -1 ||
+		getsockname(ftps->dc_socket,local->ai_addr,&(local->ai_addrlen)) == -1)
+	{
+		log_error("ftpc_active: binding failed");
+		return -1;
+	}
+	
+	//start listening for the server connection
+	if(listen(ftps->dc_socket,20) == -1)
+	{
+		log_error("ftpc_active: listen() failed");
+		return -1;
+	}
+	
+	sok = (struct sockaddr_in *)local->ai_addr;
+	
+	
+	////////////////////////////////////////
+	
+
+	char host[256];
+	struct hostent *hent;
+
+	//get local ip
+	if(gethostname(host,sizeof host) == -1)
+	{
+		log_error("ftpc_active: gethostname() failed");
+		return -1;
+	}
+	
+	hent = gethostbyname(host);
+	if(!hent)
+	{
+		log_error("ftpc_active: gethostbyname() failed. ");
+		return -1;
+	}
+
+	
+	////////////////////////////////////////////////////////
+
+	char *ip;
+	int port;
+	
+	ip = inet_ntoa(*((struct in_addr*)hent->h_addr_list[0]));
+	port = htons(sok->sin_port);
+	
+	
+	char *command_str;
+	struct ftp_response *fres;
+
+	char *arg_buff;
+	
+	if(active_str(&arg_buff,ip,port) == -1)
+	{
+		log_error("ftpc_active: argument string creation failed. ");
+		return -1;
+	}
+	
+
+	if(ftp_command_str(&command_str,"PORT",arg_buff) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_active: PORT command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+	
+
+	if(fres->code != FTPC_COMMAND_OK)
+	{
+		
+	
+		char buf[16];
+		snprintf(buf,16,"code:%d",fres->code);
+		log_error("ftpc_active: command PORT failed.");
+		log_error(buf);
+		ftp_response_free(fres);
+		return -1;
+
+	}
+	
+	ftp_response_free(fres);
+	return 0;
+
 }
 

@@ -23,6 +23,7 @@
 
 //response codes
 #define FTPC_DATA_OPENING	150
+#define FTPC_COMMAND_OK		200
 #define FTPC_CONTROL_CLOSING	221
 #define FTPC_DATA_CLOSING	226
 #define FTPC_PASSIVE_MODE	227
@@ -78,7 +79,7 @@ struct ftp_fs
 };
 
 
-
+int ftp_accept(struct ftp_server *);
 int ftp_connect(struct addrinfo *,int *);
 int ftp_command(struct ftp_server *,struct ftp_response **,char *);
 int ftp_command_str(char **,const char *,const char*);
