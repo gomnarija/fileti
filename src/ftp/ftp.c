@@ -199,7 +199,7 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 
 	int flags=0,
 		buff_size=0,//total number of bytes received
-			rcv_size=256,//recv stream size
+			rcv_size=*rc == -1 ? 256:*rc,//recv stream size
 				bytes_received;//number of bytes received
 	struct pollfd pfd;
 	pfd.fd = socket_fd;
@@ -262,8 +262,8 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 		}
 
 	}
-	while(bytes_received==rcv_size && bytes_received != 0 &&
-		(*rc == -1 || buff_size >= *rc));
+	while(bytes_received > 0 &&
+		(*rc == -1 || buff_size <= *rc));
 	
 	*rc = buff_size;
 

@@ -418,10 +418,16 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 			ftpd_disconnect(ftps);
 			return -1;
 		}
-		io_write(src_name,buffer);
+		if(io_write(src_name,buffer,response_size) == -1)
+		{
+			free(buffer);
+			return -1;
+		}
+
 		free(buffer);
+
 	}
-	while(response_size<=rcv_size);
+	while(response_size>=rcv_size);
 
 	
 
