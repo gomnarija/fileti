@@ -244,8 +244,7 @@ int ftpc_passive(struct ftp_server *ftps)
 int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 {
 	//attemps PWD command,
-	//creates ftp_fs struct
-	//return valie
+	//return value
 	//0 - success
 	//-1- failed
 
@@ -294,7 +293,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 
 
 	//pwd format 
-	//"/pwd" some text
+	//"/wd" some text
 
 	char *startp,*endp;
 	startp = fres->message;
@@ -310,8 +309,8 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	}
 
 		
-	//	"/pwd"
-	//	s    e 
+	//	"/wd"
+	//	s   e 
 
 
 	endp = startp+1;
@@ -714,4 +713,58 @@ int ftpc_mode(struct ftp_server *ftps,const int type)
 	return 0;
 }
 
+
+int ftpc_cwd(struct ftp_server *ftps,const char *wd)
+{
+	//attemps CWD command,
+	//return value
+	//0 - success
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftpc_cwd:ftp_server not connected.");
+		return -1;
+	}
+
+	if(!(ftps->server_status & FTPS_LOGGED_IN))
+	{
+		log_error("ftpc_cwd:user not logged in.");
+		return -1;
+	}
+	
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"CWD",wd) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_cwd: CWD command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_FILE_OK)
+	{		
+	
+		char buf[16];
+                snprintf(buf,16,"code:%d",fres->code);
+                log_error("ftpc_cwd: command CWD failed.");
+                log_error(buf);
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+	log_message("ftpc_cwd: success.");
+	log_message(fres->message);
+
+	ftp_response_free(fres);
+
+	return 0;
+
+
+}
 
