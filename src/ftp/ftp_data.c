@@ -39,11 +39,9 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 	//l   m     r
 
 
-
 	if((new_line = strchr(buffer,'\n'))==NULL)
-	{
 		return -1;
-	}
+
 	do//line by line
 	{
 		*new_line = '\0';//terminate at '\n'	
@@ -54,13 +52,10 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 		
 		left = curr_line;
 		if((right = strchr(curr_line,';'))==NULL)
-		{
 			return -1;
-		}
+		
 		if((mid = strchr(curr_line,'='))==NULL)
-		{
 			return -1;
-		}
 
 		do//expression by expression, fact=value;
 		{//			      l   m     r
@@ -176,14 +171,16 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 		ftpd_disconnect(ftps);
 	        return -1;
         }
-	
-	
-	//temp
-	if(ftp_accept(ftps)==-1)
+	 
+
+	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
 	{
-		log_error("ftpd_list: accept failed");
-		return -1;
-	}	
+                log_error("ftpd_list:no data connection. ");
+                return -1; 
+        }
+
+
+	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
 		char buf[16];
@@ -260,11 +257,10 @@ int ftpd_connect(struct ftp_server *ftps,int contype)
 
 	//active
 	if(contype == FTPD_ACTIVE &&
-		ftpc_active(ftps) != -1)
+		ftpc_active(ftps) != -1 &&
+ 			pthread_create(&(ftps->dc_thread),NULL,ftp_accept,(void*)ftps) == 0)
 	{
-		
-		log_message("ftpd_connect: active connection established.");
-		ftps->server_status |= FTPS_DATA_CONNECTED;	
+		log_message("ftpd_connect: socket is listening. ");
 		return 0;
 	}
 	else if(contype == FTPD_ACTIVE)
@@ -302,7 +298,7 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	//return value:
 	//0 - success
 	//-1 - failed
-	
+
 	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
 	{
 		log_warning("ftpd_disconnect: no data connection. ");
@@ -329,10 +325,17 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	}
 
 
-	close(ftps->dc_socket);
 	ftps->server_status ^= FTPS_DATA_CONNECTED;
 
+	close(ftps->dc_socket);
+	
+	pthread_join(ftps->dc_thread,NULL);
+	ftps->dc_thread = 0;	
+
 	free(buffer);
+
+	log_message("ftpd_disconnect: data connection stopped. ");
+
 	return 0;
 }
 

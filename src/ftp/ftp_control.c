@@ -93,7 +93,7 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 		return 0;
 	}
 	else if(fres->code == FTPC_INVALID_CRED 
-		|| fres->code == FTPC_NOT_LOGGED)//some servers return 530
+		|| fres->code == FTPC_NOT_LOGGED)
 	{
 		log_error("ftpc_password: wrong credentials");
 		ftp_response_free(fres);
@@ -117,13 +117,13 @@ int ftp_login(struct ftp_server *ftps,const char *user_name,const char *password
 	//attempts ftp login by sending USER and PWD commands
 	//return value:
 	//0 - success
-	//-1 - wrong user or password 
-	//-2 - failed
+	//-2 - wrong user or password 
+	//-1 - failed
 	
 	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
 	{
 		log_error("ftp_login:ftp_server not connected.");
-		return -2;
+		return -1;
 	}
 
 	if(ftpc_user(ftps,user_name)==-1)
@@ -482,7 +482,9 @@ int ftpc_disconnect(struct ftp_server *ftps)
 	close(ftps->cc_socket);
 	ftps->cc_socket = -1;
 	ftps->server_status ^= FTPS_CONTROL_CONNECTED;	
+		
 	
+	log_message("ftpc_disconnect: server disconnected. ");
 	ftp_response_free(fres);
 	return 0;
 }

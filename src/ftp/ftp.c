@@ -37,7 +37,8 @@ int ftp_server_info(const char *server_name,const char *server_port,struct ftp_s
 	(*ftps)->cc_socket     = -1;	
 	(*ftps)->dc_socket     = -1;
 	(*ftps)->dc_info       = NULL;
-	
+	(*ftps)->dc_thread     = 0;	
+
 	(*ftps)->dc_info = (struct addrinfo *)malloc(sizeof(struct addrinfo));
 	memset((*ftps)->dc_info,0,sizeof(struct addrinfo));
 	
@@ -434,35 +435,58 @@ int ftp_command_str(char **cstr,const char *command,const char *arguments)
 
 }
 
-int ftp_accept(struct ftp_server *ftps)
+void *ftp_accept(void *arg)
 {
-	//accepts pending data connection, if somethign like that exists
+	//new thread
+	//accepts pending data connection, if something like that exists
 	//return value:
 	//0-success
 	//-1-failed
-	//TODO:threads	
-
 	//probably should do something with this idk :/	
 	socklen_t addrlen = (socklen_t)sizeof (struct sockaddr);
 
 
+	struct ftp_server *ftps = (struct ftp_server*)arg;
+
+	struct pollfd pfd;
+	pfd.fd = ftps->dc_socket;
+	pfd.events = POLLIN;//reading possible
+	pfd.revents = 0;
+	
+
+
+	//wait for socket
+	int rt = poll(&pfd,1,1000);
+	if(rt == 0)
+	{
+		log_error("ftp_accept: timedout\n");
+		return NULL;
+	}
+	else if (rt==-1)
+	{
+		log_error("ftp_accept: poll failed\n");
+		return NULL;
+	}
+
+
 
 	int nfd;
-	
 	nfd = accept(ftps->dc_socket,(struct sockaddr*)ftps->dc_info->ai_addr,&addrlen);
 	if(nfd == -1)
 	{
 		log_error("ftp_accept: accept failed. ");
-		return -1;
+		return NULL;
 	}
 	else
 	{
 		close(ftps->dc_socket);
 		ftps->dc_socket = nfd;	
 	}
-
-	
+		
+	ftps->server_status |= FTPS_DATA_CONNECTED;	
 	log_message("ftp_accept: server connection accepted. ");
-	return 0;
-	
+
+		
+	return NULL;
+
 }

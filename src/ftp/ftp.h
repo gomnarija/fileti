@@ -6,6 +6,7 @@
 #include "netdb.h"
 #include "arpa/inet.h"
 #include "netinet/in.h"
+#include "pthread.h"
 
 
 //server status
@@ -54,6 +55,7 @@ struct ftp_server
 	int 	 cc_socket;//control socket
 	int	 dc_socket;//data socket
 	int 	 server_status;
+	pthread_t dc_thread;//used for accept(), which is placed in another thread
 };
 
 
@@ -79,7 +81,7 @@ struct ftp_fs
 };
 
 
-int ftp_accept(struct ftp_server *);
+void *ftp_accept(void *);
 int ftp_connect(struct addrinfo *,int *);
 int ftp_command(struct ftp_server *,struct ftp_response **,char *);
 int ftp_command_str(char **,const char *,const char*);
