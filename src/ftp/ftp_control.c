@@ -112,7 +112,7 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 }
 
 
-int ftp_login(struct ftp_server *ftps,const char *user_name,const char *password)
+int ftpc_login(struct ftp_server *ftps,const char *user_name,const char *password)
 {
 	//attempts ftp login by sending USER and PWD commands
 	//return value:
@@ -396,7 +396,7 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 	}
 	
         log_message("ftpc_type: command TYPE sent.");
-	
+	log_message(fres->message);
 	
 
 	ftp_response_free(fres);
@@ -428,7 +428,8 @@ int ftpc_connect(struct ftp_server *ftps)
 
 	//welcome message
 	char *buff;
-	if(ftp_receive(ftps,ftps->cc_socket,&buff,FTPT_CONTROL) == -1)
+	int response_size = -1;
+	if(ftp_receive(ftps,ftps->cc_socket,&buff,&response_size) == -1)
 	{	
 		log_error("ftpc_connect:ftp_receive failed.");
 		return -1;
@@ -653,4 +654,64 @@ int ftpc_active(struct ftp_server *ftps)
 	return 0;
 
 }
+
+int ftpc_mode(struct ftp_server *ftps,const int type)
+{
+	//attemps MODE command,
+	//tells the server in what mode to transmit files
+	//return value
+	//0 - success
+	//-1- failed
+
+	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		log_error("ftpc_mode:ftp_server not connected.");
+		return -1;
+	}
+
+	if(!(ftps->server_status & FTPS_LOGGED_IN))
+	{
+		log_error("ftpc_mode:user not logged in.");
+		return -1;
+	}
+
+	char *command_str,
+			mode_str[32]={'\0'};
+	struct ftp_response *fres;
+	
+	switch(type)
+	{
+		case FTP_MODE_STREAM:
+			snprintf(mode_str,32,"%s","S");
+			break;
+	
+		case FTP_MODE_BLOCK:
+			snprintf(mode_str,32,"%s","B");
+			break;
+		case FTP_MODE_COMPRESSED:
+			snprintf(mode_str,32,"%s","C");
+			break;
+		default:	
+			log_error("ftcp_mode: non existant mode.");
+			return -1;
+	}
+
+	if(ftp_command_str(&command_str,"MODE",mode_str) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_mode: MODE command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+	
+        log_message("ftpc_mode: command MODE sent.");
+	log_message(fres->message);
+
+	ftp_response_free(fres);
+
+	return 0;
+}
+
 

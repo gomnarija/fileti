@@ -19,6 +19,11 @@
 #define FTP_TYPE_ASCII  	 26
 #define FTP_TYPE_BINARY 	 7
 
+#define FTP_MODE_STREAM		 111
+#define FTP_MODE_BLOCK		 112
+#define FTP_MODE_COMPRESSED	 113
+
+
 #define FTPD_ACTIVE		69
 #define FTPD_PASSIVE		70
 
@@ -87,7 +92,7 @@ int ftp_command(struct ftp_server *,struct ftp_response **,char *);
 int ftp_command_str(char **,const char *,const char*);
 void ftp_fs_free(struct ftp_fs *);
 void ftp_response_free(struct ftp_response *);
-int ftp_receive(struct ftp_server *,int, char **,int);
+int ftp_receive(struct ftp_server *,int, char **,int *);
 int ftp_server_info(const char *,const char *,struct ftp_server **);
 void ftp_server_free(struct ftp_server *);
 int ftp_send(struct ftp_server *,int,const char *);

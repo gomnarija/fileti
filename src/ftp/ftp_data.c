@@ -198,8 +198,9 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	ftp_response_free(fres);
 	
 	char *buffer;
+	int response_size = -1;
 
-	if(ftp_receive(ftps,ftps->dc_socket,&buffer,FTPT_CONTROL) == -1)
+	if(ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size) == -1)
 	{
 		log_error("ftpd_list: data ftp_receive() failed");
 		free(buffer);
@@ -307,8 +308,9 @@ int ftpd_disconnect(struct ftp_server *ftps)
 
 	
 	char *buffer;
+	int response_size = -1;
 	
-	if(ftp_receive(ftps,ftps->cc_socket,&buffer,FTPT_CONTROL) == -1)
+	if(ftp_receive(ftps,ftps->cc_socket,&buffer,&response_size) == -1)
 	{
 		log_error("ftpd_disconnect: ftp_receive() failed");
 		return -1;

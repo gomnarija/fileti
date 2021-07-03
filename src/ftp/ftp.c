@@ -182,31 +182,13 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
 	return 0;
 
 }
-int check_eof(char *buffer,int buff_size,int tmode)
-{
-	switch(tmode)
-	{
-		case FTPT_CONTROL:
-			if(buffer[buff_size-1]=='\n' && buffer[buff_size-2]=='\r')
-			{
-				return 1;
-				
-			}
-			else
-			{
-				return 0;
-			}
-		default:
-			return 0;
-	}
-}
-
-int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
+int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 {
 	//attempts to receive a message over socket
 	//return value:
 	//0 - succes
 	//-1- failed
+
 
 	
 	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
@@ -266,7 +248,7 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 		}
 
 		buff_size += bytes_received;
-		if(bytes_received == 0)
+		if(buff_size == 0)
 		{
 			log_error("ftps_receive: nothing was read..");
 			return -1;
@@ -280,7 +262,10 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int tm)
 		}
 
 	}
-	while(!check_eof(*buffer,buff_size,tm));
+	while(bytes_received==rcv_size && bytes_received != 0 &&
+		(*rc == -1 || buff_size >= *rc));
+	
+	*rc = buff_size;
 
 	if((*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
 	{
@@ -316,7 +301,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	char *response;//raw response string, returned from ftp_receive
 	struct ftp_response *curr_res;
 	*fres = NULL; 
-	
+	int response_size=-1;	
 
 	if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL)
 	{
@@ -329,6 +314,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	curr_res->message = NULL;
 
 
+
 	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
 	{
 		log_error("ftp_command: ftp_send() failed.");
@@ -339,7 +325,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	if(command)free(command);
 
 	
-	if(ftp_receive(ftps,ftps->cc_socket,&response,FTPT_CONTROL) == -1)
+	if(ftp_receive(ftps,ftps->cc_socket,&response,&response_size) == -1)
 	{
 	
 		log_error("ftp_command: ftp_receive() failed.");
