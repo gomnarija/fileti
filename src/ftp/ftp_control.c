@@ -433,6 +433,8 @@ int ftpc_connect(struct ftp_server *ftps)
 		log_error("ftpc_connect:ftp_receive failed.");
 		return -1;
 	}
+
+	buff[response_size-1]='\0';
 	log_message(buff);
 	free(buff);
 
@@ -562,6 +564,7 @@ int ftpc_active(struct ftp_server *ftps)
 
 	{
 		log_error("ftpc_active: socket() failed");
+		freeaddrinfo(local);
 		return -1;
 	}
 
@@ -570,6 +573,7 @@ int ftpc_active(struct ftp_server *ftps)
 		getsockname(ftps->dc_socket,local->ai_addr,&(local->ai_addrlen)) == -1)
 	{
 		log_error("ftpc_active: binding failed");
+		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -577,6 +581,7 @@ int ftpc_active(struct ftp_server *ftps)
 	if(listen(ftps->dc_socket,20) == -1)
 	{
 		log_error("ftpc_active: listen() failed");
+		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -593,6 +598,7 @@ int ftpc_active(struct ftp_server *ftps)
 	if(gethostname(host,sizeof host) == -1)
 	{
 		log_error("ftpc_active: gethostname() failed");
+		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -600,6 +606,7 @@ int ftpc_active(struct ftp_server *ftps)
 	if(!hent)
 	{
 		log_error("ftpc_active: gethostbyname() failed. ");
+		freeaddrinfo(local);
 		return -1;
 	}
 
@@ -621,6 +628,8 @@ int ftpc_active(struct ftp_server *ftps)
 	if(active_str(&arg_buff,ip,port) == -1)
 	{
 		log_error("ftpc_active: argument string creation failed. ");
+		free(arg_buff);
+		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -632,6 +641,8 @@ int ftpc_active(struct ftp_server *ftps)
 	{
 		log_error("ftpc_active: PORT command failed.");
 		ftp_response_free(fres);
+		freeaddrinfo(local);
+		free(arg_buff);
 		return -1;
 	}
 	
@@ -645,10 +656,14 @@ int ftpc_active(struct ftp_server *ftps)
 		log_error("ftpc_active: command PORT failed.");
 		log_error(buf);
 		ftp_response_free(fres);
+		freeaddrinfo(local);
+		free(arg_buff);
 		return -1;
 
 	}
 	
+	freeaddrinfo(local);
+	free(arg_buff);
 	ftp_response_free(fres);
 	return 0;
 

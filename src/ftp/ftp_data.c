@@ -30,9 +30,32 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 	
 	if((curr_file = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
 		return -1;
+
+	while(ftfs->files)
+	{
 	
+		struct ftp_file *tmp;
+		tmp = ftfs->files;
+	
+		ftfs->files = ftfs->files->next;	
+
+		if(tmp->name)
+			free(tmp->name);
+		if(tmp->type)
+			free(tmp->type);
+		
+		if(tmp)
+			free(tmp);
+	}
+
 	ftfs->files = curr_file;
 	ftfs->files->next = NULL;
+	ftfs->files->name = NULL;
+	ftfs->files->type = NULL;
+
+
+
+
 	
 	//fact=value;fact=value;fact=value;fact=value; name\nfact=value;fact=value; name\n
 
@@ -60,37 +83,40 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 
 		do//expression by expression, fact=value;
 		{//			      l   m     r
+			
 			*mid   = '\0';
 			*right = '\0';
 
 			char *fact,//left of '='
 				*value;//right of '='
 
-			if((fact = (char*)malloc(strlen(left)))==NULL ||
-				(value = (char*)malloc(strlen(mid+1)))==NULL)
+			if((fact = (char*)malloc(strlen(left)+1))==NULL ||
+				(value = (char*)malloc(strlen(mid+1)+1))==NULL)
 				return -1;
 
 	
 
-			snprintf(fact,strlen(left),"%s",left);//left to mid
-			snprintf(value,strlen(mid+1),"%s",mid+1);//mid to right
+			snprintf(fact,strlen(left)+1,"%s",left);//left to mid
+			snprintf(value,strlen(mid+1)+1,"%s",mid+1);//mid to right
 
 			
 			if(!strcmp(fact,"type"))
 			{
-				curr_file->type = value;	
+				if((curr_file->type = (char *)malloc(strlen(value)+1))==NULL)
+				{
+					free(fact);
+					free(value);
+					return -1;
+				}
+
+				snprintf(curr_file->type,strlen(value)+1,"%s",value);
 			}
 			else if(!strcmp(fact,"sizd") || !strcmp(fact,"size"))
 			{
 				curr_file->size = strtol(value,NULL,10);
-				free(value);
 			}
-			else
-			{
-				free(value);
-			}
-
 			free(fact);
+			free(value);
 
 			left = right+1;
 			right = strchr(left,';');
@@ -104,7 +130,6 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 		{
 			if((curr_file->name = (char *)malloc(strlen(left+1)))==NULL)
 				return -1;
-		
 			snprintf(curr_file->name,strlen(left+1),"%s",left+1);
 		}
 		
@@ -215,6 +240,17 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 		ftpd_disconnect(ftps);
 		return -1;
 	}
+
+	//terminate buffer
+	if((buffer = (char*) realloc(buffer,response_size+1))==NULL)
+	{	
+		log_error("ftpd_list: realloc() failed.");
+		return -1;
+	}
+	buffer[response_size++] = '\0';
+
+
+
 
 
 	if(parse_mlsx(buffer,ftfs)==-1)

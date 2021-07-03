@@ -69,37 +69,38 @@ void ftp_server_free(struct ftp_server *ftps)
 
 void ftp_response_free(struct ftp_response *fres)
 {
-	if(fres->message)
-		free(fres->message);
-
-	if(fres)
-		free(fres);
-
-	return;
-
 	while(fres)
 	{
 		struct ftp_response *tmp;
 		tmp = fres;
 		fres = fres->next;
+		if(tmp->message)
+			free(tmp->message);
+
 		free(tmp);
 	}
 }
 void ftp_fs_free(struct ftp_fs *ftfs)
 {
-	struct ftp_file *fifi;
-	fifi = ftfs->files;
-	while(fifi->next)
+	while(ftfs->files)
 	{
-		if(fifi->next->name)
-			free(fifi->next->name);
-		if(fifi->next->type)
-			free(fifi->next->type);
-		fifi = fifi->next;
 	
+		struct ftp_file *tmp;
+		tmp = ftfs->files;
+	
+		ftfs->files = ftfs->files->next;	
+
+		if(tmp->name)
+			free(tmp->name);
+		if(tmp->type)
+			free(tmp->type);
+		
+		if(tmp)
+			free(tmp);
 	}
-	if(fifi)
-		free(fifi);
+	if(ftfs->pwd)
+		free(ftfs->pwd);
+
 	if(ftfs)
 		free(ftfs);
 }
@@ -307,6 +308,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 
 	char *response;//raw response string, returned from ftp_receive
 	struct ftp_response *curr_res;
+
 	*fres = NULL; 
 	int response_size=-1;	
 
@@ -319,7 +321,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	
 	*fres = curr_res;//head
 	curr_res->message = NULL;
-
+	curr_res->next = NULL;
 
 
 	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
@@ -346,6 +348,16 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	//if the 4th character is '-'response is multi-line, 
 	//and will continue until the first line where
 	//the 4th character is space ' '
+
+	//terminate response
+	if((response = (char*) realloc(response,response_size+1))==NULL)
+	{	
+		log_error("ftp_command: realloc() failed.");
+		return -1;
+	}
+	response[response_size++] = '\0';
+
+
 
 
 	char *curr_line,
@@ -397,7 +409,9 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 				return -1;
 			}
 			curr_res = curr_res->next;
-			curr_res->message = NULL;
+			curr_res->message = NULL;	
+			curr_res->next    = NULL;
+		
 		}
 		else//no more '/n' 
 		{
