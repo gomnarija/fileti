@@ -1,6 +1,7 @@
 #include "ftp_data.h"
 #include "ftp.h"
 #include "ftp_control.h"
+#include "../utils/io.h"
 #include "../utils/log.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -341,8 +342,96 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	return 0;
 }
 
+int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+{
+	//RETR command, returns file over data connection
+	//return value
+	//0 -success
+	//-1-failed
+
+        if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+                log_error("ftpd_tetrieve_file:ftp_server not connected.");
+                return -1;
+	}
+
+
+	//establish data connection
+	if(ftpd_connect(ftps,FTPD_ACTIVE) == -1)
+	{
+		return -1;
+	}
+	
+	struct ftp_response *fres;
+
+        char *command_str;
+        if(ftp_command_str(&command_str,"RETR",src_name) == -1)
+        {
+		 return -1;
+		 ftpd_disconnect(ftps);
+	}
+        if(ftp_command(ftps,&fres,command_str)==-1)
+        {
+                log_error("ftpc_retrieve_file: RETR command failed.");
+                ftp_response_free(fres);
+               
+		ftpd_disconnect(ftps);
+	        return -1;
+        }
+	 
+
+	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
+	{
+                log_error("ftpd_retrieve_file: no data connection. ");
+                return -1; 
+        }
+
+
+	
+	if(fres->code != FTPC_DATA_OPENING)
+	{
+		char buf[16];
+                snprintf(buf,16,"code:%d",fres->code);
+                log_error("ftpd_retrieve_file: command RETR failed.");
+                log_error(buf);
+                ftp_response_free(fres);
+              
+	        return -1;
+	}
 
 
 
+
+	ftp_response_free(fres);
+	
+	char *buffer;
+	int rcv_size=8000,
+		response_size = rcv_size;
+
+
+	do
+	{
+		if(ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size) == -1)
+		{
+			log_error("ftpd_retrieve_file: data ftp_receive() failed");
+			free(buffer);
+			ftpd_disconnect(ftps);
+			return -1;
+		}
+		io_write(src_name,buffer);
+		free(buffer);
+	}
+	while(response_size<=rcv_size);
+
+	
+
+	//close data connection
+	if(ftpd_disconnect(ftps) == -1)
+		return -1;
+
+
+	log_message("ftpd_retrieve_file: success. ");	
+	return 0;
+}
 
 
