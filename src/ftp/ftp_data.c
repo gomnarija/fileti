@@ -28,7 +28,7 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 
 	struct ftp_file *curr_file;
 	
-	if((curr_file = (struct ftp_file*)malloc(sizeof curr_file))==NULL)
+	if((curr_file = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
 		return -1;
 	
 	ftfs->files = curr_file;
@@ -72,8 +72,8 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 
 	
 
-			snprintf(fact,strlen(left)+1,"%s",left);//left to mid
-			snprintf(value,strlen(mid+1)+1,"%s",mid+1);//mid to right
+			snprintf(fact,strlen(left),"%s",left);//left to mid
+			snprintf(value,strlen(mid+1),"%s",mid+1);//mid to right
 
 			
 			if(!strcmp(fact,"type"))
@@ -83,7 +83,14 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 			else if(!strcmp(fact,"sizd") || !strcmp(fact,"size"))
 			{
 				curr_file->size = strtol(value,NULL,10);
+				free(value);
 			}
+			else
+			{
+				free(value);
+			}
+
+			free(fact);
 
 			left = right+1;
 			right = strchr(left,';');
@@ -108,7 +115,7 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 			
 		if(new_line != NULL)
 		{
-			if((curr_file->next = (struct ftp_file*)malloc(sizeof curr_file))==NULL)
+			if((curr_file->next = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
 					return -1;
 			else
 			{
@@ -420,10 +427,10 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 		}
 		if(io_write(src_name,buffer,response_size) == -1)
 		{
+	
 			free(buffer);
 			return -1;
 		}
-
 		free(buffer);
 
 	}

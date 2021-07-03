@@ -71,8 +71,19 @@ void ftp_response_free(struct ftp_response *fres)
 {
 	if(fres->message)
 		free(fres->message);
+
 	if(fres)
 		free(fres);
+
+	return;
+
+	while(fres)
+	{
+		struct ftp_response *tmp;
+		tmp = fres;
+		fres = fres->next;
+		free(tmp);
+	}
 }
 void ftp_fs_free(struct ftp_fs *ftfs)
 {
@@ -248,11 +259,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 		}
 
 		buff_size += bytes_received;
-		if(buff_size == 0)
-		{
-			log_error("ftps_receive: nothing was read..");
-			return -1;
-		}
 
 		if((*buffer = (char*) realloc(*buffer,buff_size+rcv_size))==NULL)//expand buffer for
 									//next recv
@@ -261,10 +267,11 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 			return -1;
 		}
 
+
 	}
 	while(bytes_received > 0 &&
 		(*rc == -1 || buff_size <= *rc));
-	
+
 	*rc = buff_size;
 
 	if((*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
@@ -363,6 +370,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		if((curr_res->message = (char *)malloc(new_line-curr_line))==NULL)
 		{
 			log_error("ftp_command: malloc() failed.");
+			free(response);
 			return -1;
 		}
 	
@@ -371,6 +379,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		if(curr_res->code < 100 || curr_res->code > 999)
 		{
 			log_error("ftp_command: wrong code format.");
+			free(response);
 			return -1;
 		}
 
@@ -384,6 +393,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 			if((curr_res->next = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL) 
 			{
 				log_error("ftp_command: malloc () failed.");
+				free(response);
 				return -1;
 			}
 			curr_res = curr_res->next;
@@ -396,7 +406,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	
 	}while(1);
 	
-	
+	free(response);
 	
 	return 0;
 }

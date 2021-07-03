@@ -20,8 +20,8 @@
 #define FTP_TYPE_BINARY 	 7
 
 #define FTP_MODE_STREAM		 111
-#define FTP_MODE_BLOCK		 112
-#define FTP_MODE_COMPRESSED	 113
+#define FTP_MODE_BLOCK		 112//not supported
+#define FTP_MODE_COMPRESSED	 113//not supported
 
 
 #define FTPD_ACTIVE		69
@@ -33,6 +33,7 @@
 #define FTPC_CONTROL_CLOSING	221
 #define FTPC_DATA_CLOSING	226
 #define FTPC_PASSIVE_MODE	227
+#define FTPC_FILE_OK		250
 #define FTPC_PATH_NAME		257
 #define FTPC_LOGGED_IN		230
 #define FTPC_USER_OK		331
