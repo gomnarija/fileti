@@ -748,3 +748,91 @@ int ftpc_mkdir(struct ftp_server *ftps,const char *dir)
 	return 0;
 
 }
+
+int ftpc_rm(struct ftp_server *ftps,const char *file)
+{
+	//attemps DELE command,
+	//return value
+	//0 - success
+	//-1- failed
+	
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_rm"))
+		return -1;
+
+	
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"DELE",file) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_rm: DELE command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_FILE_OK)
+	{		
+	
+		ftp_command_failed(fres->code,"DELE");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+	log_message("ftpc_rm: success.");
+
+	ftp_response_free(fres);
+
+	return 0;
+
+
+}
+
+int ftpc_rmdir(struct ftp_server *ftps,const char *dir)
+{
+	//attemps RMD command,
+	//return value
+	//0 - success
+	//-1- failed
+	
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_rmdir"))
+		return -1;
+
+	
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"RMD",dir) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_rmdir: RMD command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_FILE_OK)
+	{		
+	
+		ftp_command_failed(fres->code,"RMD");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+	log_message("ftpc_rmdir: success.");
+
+	ftp_response_free(fres);
+
+	return 0;
+
+
+}

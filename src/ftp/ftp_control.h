@@ -26,6 +26,7 @@
 
 int ftpc_active(struct ftp_server *);
 int ftpc_connect(struct ftp_server *);
+int ftpc_cwd(struct ftp_server *,const char *);
 int ftpc_disconnect(struct ftp_server *);
 int ftpc_login(struct ftp_server *,const char *,const char *);
 int ftpc_mode(struct ftp_server *,const int);
@@ -33,7 +34,8 @@ int ftpc_mkdir(struct ftp_server *,const char *);
 int ftpc_password(struct ftp_server *,const char *);
 int ftpc_passive(struct ftp_server *);
 int ftpc_pwd(struct ftp_server *,struct ftp_fs **);
-int ftpc_cwd(struct ftp_server *,const char *);
+int ftpc_rm(struct ftp_server *,const char *);
+int ftpc_rmdir(struct ftp_server *,const char *);
 int ftpc_type(struct ftp_server *,const int);
 int ftpc_user(struct ftp_server *,const char *);
 
