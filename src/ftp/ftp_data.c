@@ -233,10 +233,7 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
-		char buf[16];
-                snprintf(buf,16,"code:%d",fres->code);
-                log_error("ftpd_list: command MLSD failed.");
-                log_error(buf);
+		ftp_command_failed(fres->code,"MLSD");
                 ftp_response_free(fres);
               
 	        return -1;
@@ -445,10 +442,7 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
-		char buf[16];
-                snprintf(buf,16,"code:%d",fres->code);
-                log_error("ftpd_retrieve_file: command RETR failed.");
-                log_error(buf);
+		ftp_command_failed(fres->code,"RETR");
                 ftp_response_free(fres);
               
 	        return -1;

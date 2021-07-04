@@ -107,16 +107,17 @@ struct ftp_fs
 
 
 void *ftp_accept(void *);
-int ftp_connect(struct addrinfo *,int *);
-int ftp_command(struct ftp_server *,struct ftp_response **,char *);
-int ftp_command_str(char **,const char *,const char*);
-int ftp_check_server_status(struct ftp_server *,const int,const char *);
+int  ftp_connect(struct addrinfo *,int *);
+int  ftp_command(struct ftp_server *,struct ftp_response **,char *);
+void ftp_command_failed(const int,const char *);
+int  ftp_command_str(char **,const char *,const char*);
+int  ftp_check_server_status(struct ftp_server *,const int,const char *);
 void ftp_fs_free(struct ftp_fs *);
 void ftp_response_free(struct ftp_response *);
-int ftp_receive(struct ftp_server *,int, char **,int *);
-int ftp_server_info(const char *,const char *,struct ftp_server **);
+int  ftp_receive(struct ftp_server *,int, char **,int *);
+int  ftp_server_info(const char *,const char *,struct ftp_server **);
 void ftp_server_free(struct ftp_server *);
-int ftp_send(struct ftp_server *,int,const char *);
+int  ftp_send(struct ftp_server *,int,const char *);
 
 
 

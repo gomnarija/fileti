@@ -60,10 +60,7 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 	}
 	else
 	{
-		char buf[16];
-		snprintf(buf,16,"code:%d",fres->code);
-		log_error("ftpc_user: command USER failed.");
-		log_error(buf);
+		ftp_command_failed(fres->code,"USER");
 		ftp_response_free(fres);
 		return -1;
 	}
@@ -115,10 +112,7 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 	}
 	else
 	{
-		char buf[16];
-		snprintf(buf,16,"code:%d",fres->code);
-		log_error("ftpc_password: command PASS failed.");
-		log_error(buf);
+		ftp_command_failed(fres->code,"PASS");
 		ftp_response_free(fres);
 		return -1;
 	}
@@ -179,10 +173,7 @@ int ftpc_passive(struct ftp_server *ftps)
 	{
 		
 	
-		char buf[16];
-		snprintf(buf,16,"code:%d",fres->code);
-		log_error("ftpc_passive: command PASV failed.");
-		log_error(buf);
+		ftp_command_failed(fres->code,"PASV");
 		ftp_response_free(fres);
 		return -1;
 
@@ -228,6 +219,10 @@ int ftpc_passive(struct ftp_server *ftps)
 	hints.ai_family   = AF_INET;
 	hints.ai_protocol = IPPROTO_TCP;
 	
+
+	if(ftps->dc_info)
+		freeaddrinfo(ftps->dc_info);
+
 	if(getaddrinfo(ip_str,port_str,&hints,&(ftps->dc_info)))
 	{
 		log_error("ftpc_passive: getaddrinfo() failed.");
@@ -278,10 +273,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	if(fres->code != FTPC_PATH_NAME)
 	{		
 	
-		char buf[16];
-                snprintf(buf,16,"code:%d",fres->code);
-                log_error("ftpc_pwd: command PWD failed.");
-                log_error(buf);
+		ftp_command_failed(fres->code,"PWD");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -291,35 +283,13 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	//"/wd" some text
 
 	char *startp,*endp;
-	startp = fres->message;
-	while(*startp!='"')
-	{
-		startp++;
-		if(startp-fres->message > strlen(fres->message))
-		{
-			log_error("ftpc_pwd: response message is in wrong format.");
-			ftp_response_free(fres);
-			return -1;
-		}
-	}
+	startp = strchr(fres->message,'"');
+	endp = strchr(startp+1,'"');
 
-		
+	
 	//	"/wd"
 	//	s   e 
 
-
-	endp = startp+1;
-	while(*endp!='"')
-	{
-		endp++;
-		if(endp-fres->message > strlen(fres->message))
-		{
-			log_error("ftpc_pwd: response message is in wrong format.");
-			ftp_response_free(fres);
-			return -1;
-		}
-	}
-	
 	*endp = '\0';
 
 	if(((*ftfs)->pwd = (char *)malloc(strlen(startp)))==NULL)
@@ -355,17 +325,17 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 
 
 	char *command_str,
-			type_str[32]={'\0'};
+			type_str[2];
 	struct ftp_response *fres;
 	
 	switch(type)
 	{
 		case FTP_TYPE_ASCII:
-			snprintf(type_str,32,"%s","A");
+			snprintf(type_str,2,"%s","A");
 			break;
 	
 		case FTP_TYPE_BINARY:
-			snprintf(type_str,32,"%s","I");
+			snprintf(type_str,2,"%s","I");
 			break;
 		default:	
 			log_error("ftcp_type: non existant type.");
@@ -381,8 +351,16 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 		ftp_response_free(fres);
 		return -1;
 	}
+
+	if(fres->code != FTPC_COMMAND_OK)
+	{		
 	
-        log_message("ftpc_type: command TYPE sent.");
+		ftp_command_failed(fres->code,"TYPE");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+        log_message("ftpc_type: success.");
 	log_message(fres->message);
 	
 
@@ -460,11 +438,7 @@ int ftpc_disconnect(struct ftp_server *ftps)
 	if(fres->code != FTPC_CONTROL_CLOSING)
 	{		
 	
-		char buf[16];
-                snprintf(buf,16,"code:%d",fres->code);
-                log_error("ftpc_disconnect: command QUIT failed.");
-		log_error("possible file transfer in progress.");
-                log_error(buf);
+		ftp_command_failed(fres->code,"QUIT");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -520,40 +494,25 @@ int ftpc_active(struct ftp_server *ftps)
 		return -1;
 
 
-	struct sockaddr_in *sok;
-	struct addrinfo hints, *local;//temp, for creating socket
-	memset(&hints,0,sizeof hints);
-	
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-
-	
-	////////////////////////////////////////////////////////////////////
-	if(getaddrinfo(NULL,"0",&hints,&local) == -1)
-	{
-		
-		log_error("ftpc_active: getaddrinfo() failed");
-		return -1;
-	}
+	struct sockaddr_in sok;
+	memset(&sok,0,sizeof sok);
+	sok.sin_port = htons(0);//0 port will be bound to random
+	socklen_t ssize = sizeof sok;
 	
 	//listening socket on random port
-	if((ftps->dc_socket = socket(local->ai_family,
-					local->ai_socktype | SOCK_NONBLOCK,
-						local->ai_protocol)) == -1)
-
+	if((ftps->dc_socket = socket(AF_INET,
+					 SOCK_STREAM | SOCK_NONBLOCK,
+						IPPROTO_TCP)) == -1)
 	{
 		log_error("ftpc_active: socket() failed");
-		freeaddrinfo(local);
 		return -1;
 	}
 
 	//get random avaliable port
-	if(bind(ftps->dc_socket,local->ai_addr,local->ai_addrlen) == -1 ||
-		getsockname(ftps->dc_socket,local->ai_addr,&(local->ai_addrlen)) == -1)
+	if(bind(ftps->dc_socket,(struct sockaddr*)&sok,ssize) == -1 ||
+		getsockname(ftps->dc_socket,(struct sockaddr*)&sok,&ssize) == -1)
 	{
 		log_error("ftpc_active: binding failed");
-		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -561,16 +520,9 @@ int ftpc_active(struct ftp_server *ftps)
 	if(listen(ftps->dc_socket,20) == -1)
 	{
 		log_error("ftpc_active: listen() failed");
-		freeaddrinfo(local);
 		return -1;
 	}
 	
-	sok = (struct sockaddr_in *)local->ai_addr;
-	
-	
-	////////////////////////////////////////
-	
-
 	char host[256];
 	struct hostent *hent;
 
@@ -578,7 +530,6 @@ int ftpc_active(struct ftp_server *ftps)
 	if(gethostname(host,sizeof host) == -1)
 	{
 		log_error("ftpc_active: gethostname() failed");
-		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -586,20 +537,20 @@ int ftpc_active(struct ftp_server *ftps)
 	if(!hent)
 	{
 		log_error("ftpc_active: gethostbyname() failed. ");
-		freeaddrinfo(local);
 		return -1;
 	}
 
 	
-	////////////////////////////////////////////////////////
-
 	char *ip;
 	int port;
 	
 	ip = inet_ntoa(*((struct in_addr*)hent->h_addr_list[0]));
-	port = htons(sok->sin_port);
+	port = htons(sok.sin_port);
+	
+
 	
 	
+
 	char *command_str;
 	struct ftp_response *fres;
 
@@ -609,7 +560,6 @@ int ftpc_active(struct ftp_server *ftps)
 	{
 		log_error("ftpc_active: argument string creation failed. ");
 		free(arg_buff);
-		freeaddrinfo(local);
 		return -1;
 	}
 	
@@ -621,7 +571,6 @@ int ftpc_active(struct ftp_server *ftps)
 	{
 		log_error("ftpc_active: PORT command failed.");
 		ftp_response_free(fres);
-		freeaddrinfo(local);
 		free(arg_buff);
 		return -1;
 	}
@@ -631,18 +580,13 @@ int ftpc_active(struct ftp_server *ftps)
 	{
 		
 	
-		char buf[16];
-		snprintf(buf,16,"code:%d",fres->code);
-		log_error("ftpc_active: command PORT failed.");
-		log_error(buf);
+		ftp_command_failed(fres->code,"PORT");
 		ftp_response_free(fres);
-		freeaddrinfo(local);
 		free(arg_buff);
 		return -1;
 
 	}
 	
-	freeaddrinfo(local);
 	free(arg_buff);
 	ftp_response_free(fres);
 	return 0;
@@ -693,7 +637,16 @@ int ftpc_mode(struct ftp_server *ftps,const int type)
 		return -1;
 	}
 	
-        log_message("ftpc_mode: command MODE sent.");
+	if(fres->code != FTPC_COMMAND_OK)
+	{		
+	
+		ftp_command_failed(fres->code,"MODE");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+        log_message("ftpc_mode: success.");
 	log_message(fres->message);
 
 	ftp_response_free(fres);
@@ -731,10 +684,7 @@ int ftpc_cwd(struct ftp_server *ftps,const char *wd)
 	if(fres->code != FTPC_FILE_OK)
 	{		
 	
-		char buf[16];
-                snprintf(buf,16,"code:%d",fres->code);
-                log_error("ftpc_cwd: command CWD failed.");
-                log_error(buf);
+		ftp_command_failed(fres->code,"CWD");
                 ftp_response_free(fres);
                 return -1;
 	}

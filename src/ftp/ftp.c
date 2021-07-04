@@ -281,7 +281,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 		}
 
 		buff_size += bytes_received;
-
 		if((*buffer = (char*) realloc(*buffer,buff_size+rcv_size))==NULL)//expand buffer for
 									//next recv
 		{
@@ -302,7 +301,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 			free(*buffer);
 			return -1;
 	}
-
 
 	//log_message(buff);
 	
@@ -538,3 +536,12 @@ int ftp_check_server_status(struct ftp_server *ftps,const int status,const char 
 	return (ftps->server_status&status)==status;
 }
 
+void ftp_command_failed(const int code,const char *command)
+{
+
+	char buf[10];
+        snprintf(buf,10,"code: %d",code);
+        log_error("command failed:");
+        log_error(command);
+        log_error(buf);
+}
