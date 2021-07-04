@@ -247,10 +247,16 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	char *buffer;
 	int response_size = -1;
 
-	if(ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size) == -1)
+
+	int rcv;
+	if((rcv=ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size)) == -1)
+	{	
+		log_error("ftpd_list:ftp_receive failed.");
+		return -1;
+	}
+	else if(rcv==-2)
 	{
-		log_error("ftpd_list: data ftp_receive() failed");
-		free(buffer);
+		log_warning("ftpd_list: ftp_receive read nothing. ");
 		ftpd_disconnect(ftps);
 		return -1;
 	}
@@ -259,6 +265,7 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	if((buffer = (char*) realloc(buffer,response_size+1))==NULL)
 	{	
 		log_error("ftpd_list: realloc() failed.");
+		ftpd_disconnect(ftps);
 		return -1;
 	}
 	buffer[response_size++] = '\0';
@@ -363,18 +370,22 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	char *buffer;
 	int response_size = -1;
 	
-	if(ftp_receive(ftps,ftps->cc_socket,&buffer,&response_size) == -1)
+	int rcv;
+	if((rcv=ftp_receive(ftps,ftps->cc_socket,&buffer,&response_size)) == -1)
+	{	
+		log_error("ftpd_disconnect:ftp_receive failed.");
+		return -1;
+	}
+	else if(rcv==-2)
 	{
-		log_error("ftpd_disconnect: ftp_receive() failed");
+		log_warning("ftpd_disconnect: ftp_receive read nothing. ");
 		return -1;
 	}
 
+
 	if(strtol(buffer,NULL,10) != FTPC_DATA_CLOSING)
 	{
-		char buf[16];
-                snprintf(buf,16,"code:%ld",strtol(buffer,NULL,10));
-                log_error("ftpd_disconnect: error.");
-                log_error(buf);
+		ftp_command_failed(strtol(buffer,NULL,10),"[]");
 		free(buffer);
                 return -1;
 	}
@@ -458,15 +469,22 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 		response_size = rcv_size;
 
 
+
+	int rcv;
 	do
 	{
-		if(ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size) == -1)
+		if((rcv = ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size)) == -1)
 		{
 			log_error("ftpd_retrieve_file: data ftp_receive() failed");
 			free(buffer);
 			ftpd_disconnect(ftps);
 			return -1;
 		}
+		else if(rcv==-2)
+		{		
+			break;
+		}
+
 		if(io_write(src_name,buffer,response_size) == -1)
 		{
 	

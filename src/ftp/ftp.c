@@ -221,7 +221,7 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 	//return value:
 	//0 - succes
 	//-1- failed
-
+	//-2- empty buffer, could be done reading
 
 	
 	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
@@ -281,10 +281,12 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 		}
 
 		buff_size += bytes_received;
+
 		if((*buffer = (char*) realloc(*buffer,buff_size+rcv_size))==NULL)//expand buffer for
 									//next recv
 		{
 			log_error("ftp_receive: realloc() failed.");
+			free(*buffer);
 			return -1;
 		}
 
@@ -295,13 +297,17 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 
 	*rc = buff_size;
 
-	if((*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
+
+	if(buff_size != 0 && (*buffer = (char*) realloc(*buffer,buff_size))==NULL)//scale buffer down
 	{
-			log_error("ftp_receive: realloc() scaling down failed.");
 			free(*buffer);
 			return -1;
 	}
-
+	else if(buff_size == 0)
+	{
+		free(*buffer);
+		return -2;
+	}
 	//log_message(buff);
 	
 	return 0;
@@ -347,10 +353,16 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	if(command)free(command);
 
 	
-	if(ftp_receive(ftps,ftps->cc_socket,&response,&response_size) == -1)
+	int rcv;
+	if((rcv = ftp_receive(ftps,ftps->cc_socket,&response,&response_size)) == -1)
 	{
 	
 		log_error("ftp_command: ftp_receive() failed.");
+		return -1;
+	}
+	else if(rcv == -2)
+	{
+		log_warning("ftp_command: ftp_receive() read nothing. ");
 		return -1;
 	}
 

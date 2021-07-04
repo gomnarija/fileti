@@ -394,9 +394,15 @@ int ftpc_connect(struct ftp_server *ftps)
 	//welcome message
 	char *buff;
 	int response_size = -1;
-	if(ftp_receive(ftps,ftps->cc_socket,&buff,&response_size) == -1)
+	int rcv;
+	if((rcv=ftp_receive(ftps,ftps->cc_socket,&buff,&response_size)) == -1)
 	{	
 		log_error("ftpc_connect:ftp_receive failed.");
+		return -1;
+	}
+	else if(rcv==-2)
+	{
+		log_warning("ftpc_connect: ftp_receive read nothing. ");
 		return -1;
 	}
 
