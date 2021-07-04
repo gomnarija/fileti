@@ -459,12 +459,12 @@ int ftp_command_str(char **cstr,const char *command,const char *arguments)
 	//-1 - failed
 
 
-	*cstr = (char *)malloc(strlen(command)+strlen(arguments)+3);
+	*cstr = (char *)malloc(strlen(command)+strlen(arguments)+4);
 
 	if(!(*cstr))
 		return -1;
 
-	snprintf(*cstr,strlen(command)+strlen(arguments)+3,"%s %s\n",command,arguments);
+	snprintf(*cstr,strlen(command)+strlen(arguments)+4,"%s %s\r\n",command,arguments);
 
 	return 0;
 

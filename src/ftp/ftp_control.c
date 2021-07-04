@@ -706,3 +706,45 @@ int ftpc_cwd(struct ftp_server *ftps,const char *wd)
 
 }
 
+int ftpc_mkdir(struct ftp_server *ftps,const char *dir)
+{
+	//attemps MKD command,
+	//return value
+	//0 - success
+	//-1- failed
+	
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_mkdir"))
+		return -1;
+
+	
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"MKD",dir) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_mkdir: MKD command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_PATH_NAME)
+	{		
+	
+		ftp_command_failed(fres->code,"MKD");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+	log_message("ftpc_mkdir: success.");
+
+	ftp_response_free(fres);
+
+	return 0;
+
+}

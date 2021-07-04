@@ -485,7 +485,7 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 			break;
 		}
 
-		if(io_write(src_name,buffer,response_size) == -1)
+		if(io_write(dst_name,buffer,response_size) == -1)
 		{
 	
 			free(buffer);
