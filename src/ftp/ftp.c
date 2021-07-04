@@ -548,7 +548,7 @@ int ftp_check_server_status(struct ftp_server *ftps,const int status,const char 
 	return (ftps->server_status&status)==status;
 }
 
-void ftp_command_failed(const int code,const char *command)
+void ftp_command_failed(const int code,char *message,const char *command)
 {
 
 	char buf[10];
@@ -556,4 +556,5 @@ void ftp_command_failed(const int code,const char *command)
         log_error("command failed:");
         log_error(command);
         log_error(buf);
+        log_error(message);
 }

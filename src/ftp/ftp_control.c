@@ -60,7 +60,7 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 	}
 	else
 	{
-		ftp_command_failed(fres->code,"USER");
+		ftp_command_failed(fres->code,fres->message,"USER");
 		ftp_response_free(fres);
 		return -1;
 	}
@@ -112,7 +112,7 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 	}
 	else
 	{
-		ftp_command_failed(fres->code,"PASS");
+		ftp_command_failed(fres->code,fres->message,"PASS");
 		ftp_response_free(fres);
 		return -1;
 	}
@@ -173,7 +173,7 @@ int ftpc_passive(struct ftp_server *ftps)
 	{
 		
 	
-		ftp_command_failed(fres->code,"PASV");
+		ftp_command_failed(fres->code,fres->message,"PASV");
 		ftp_response_free(fres);
 		return -1;
 
@@ -273,7 +273,7 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	if(fres->code != FTPC_PATH_NAME)
 	{		
 	
-		ftp_command_failed(fres->code,"PWD");
+		ftp_command_failed(fres->code,fres->message,"PWD");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -355,7 +355,7 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 	if(fres->code != FTPC_COMMAND_OK)
 	{		
 	
-		ftp_command_failed(fres->code,"TYPE");
+		ftp_command_failed(fres->code,fres->message,"TYPE");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -444,7 +444,7 @@ int ftpc_disconnect(struct ftp_server *ftps)
 	if(fres->code != FTPC_CONTROL_CLOSING)
 	{		
 	
-		ftp_command_failed(fres->code,"QUIT");
+		ftp_command_failed(fres->code,fres->message,"QUIT");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -586,7 +586,7 @@ int ftpc_active(struct ftp_server *ftps)
 	{
 		
 	
-		ftp_command_failed(fres->code,"PORT");
+		ftp_command_failed(fres->code,fres->message,"PORT");
 		ftp_response_free(fres);
 		free(arg_buff);
 		return -1;
@@ -646,7 +646,7 @@ int ftpc_mode(struct ftp_server *ftps,const int type)
 	if(fres->code != FTPC_COMMAND_OK)
 	{		
 	
-		ftp_command_failed(fres->code,"MODE");
+		ftp_command_failed(fres->code,fres->message,"MODE");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -690,7 +690,7 @@ int ftpc_cwd(struct ftp_server *ftps,const char *wd)
 	if(fres->code != FTPC_FILE_OK)
 	{		
 	
-		ftp_command_failed(fres->code,"CWD");
+		ftp_command_failed(fres->code,fres->message,"CWD");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -735,7 +735,7 @@ int ftpc_mkdir(struct ftp_server *ftps,const char *dir)
 	if(fres->code != FTPC_PATH_NAME)
 	{		
 	
-		ftp_command_failed(fres->code,"MKD");
+		ftp_command_failed(fres->code,fres->message,"MKD");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -778,7 +778,7 @@ int ftpc_rm(struct ftp_server *ftps,const char *file)
 	if(fres->code != FTPC_FILE_OK)
 	{		
 	
-		ftp_command_failed(fres->code,"DELE");
+		ftp_command_failed(fres->code,fres->message,"DELE");
                 ftp_response_free(fres);
                 return -1;
 	}
@@ -822,7 +822,7 @@ int ftpc_rmdir(struct ftp_server *ftps,const char *dir)
 	if(fres->code != FTPC_FILE_OK)
 	{		
 	
-		ftp_command_failed(fres->code,"RMD");
+		ftp_command_failed(fres->code,fres->message,"RMD");
                 ftp_response_free(fres);
                 return -1;
 	}

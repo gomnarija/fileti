@@ -233,7 +233,7 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
-		ftp_command_failed(fres->code,"MLSD");
+		ftp_command_failed(fres->code,fres->message,"MLSD");
                 ftp_response_free(fres);
               
 	        return -1;
@@ -385,7 +385,8 @@ int ftpd_disconnect(struct ftp_server *ftps)
 
 	if(strtol(buffer,NULL,10) != FTPC_DATA_CLOSING)
 	{
-		ftp_command_failed(strtol(buffer,NULL,10),"[]");
+		char *endp;
+		ftp_command_failed(strtol(buffer,&endp,10),endp,"[]");
 		free(buffer);
                 return -1;
 	}
@@ -453,7 +454,7 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 	
 	if(fres->code != FTPC_DATA_OPENING)
 	{
-		ftp_command_failed(fres->code,"RETR");
+		ftp_command_failed(fres->code,fres->message,"RETR");
                 ftp_response_free(fres);
               
 	        return -1;

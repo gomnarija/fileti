@@ -109,7 +109,7 @@ struct ftp_fs
 void *ftp_accept(void *);
 int  ftp_connect(struct addrinfo *,int *);
 int  ftp_command(struct ftp_server *,struct ftp_response **,char *);
-void ftp_command_failed(const int,const char *);
+void ftp_command_failed(const int,char *,const char *);
 int  ftp_command_str(char **,const char *,const char*);
 int  ftp_check_server_status(struct ftp_server *,const int,const char *);
 void ftp_fs_free(struct ftp_fs *);
