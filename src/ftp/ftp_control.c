@@ -35,11 +35,8 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 	//0 - success
 	//-1 - failed
 	
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_user:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_user"))
 		return -1;
-	}
 	
 	struct ftp_response *fres;
 	
@@ -80,12 +77,10 @@ int ftpc_password(struct ftp_server *ftps,const char *password)
 	//0  - success
 	//-1 - failed 
 	//-2 - wrong credentials
-	
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_password:ftp_server not connected.");
+
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_password"))
 		return -1;
-	}
 	
 	struct ftp_response *fres;
 	
@@ -139,16 +134,12 @@ int ftpc_login(struct ftp_server *ftps,const char *user_name,const char *passwor
 	//-2 - wrong user or password 
 	//-1 - failed
 	
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftp_login:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_login"))
 		return -1;
-	}
-
+	
+	
 	if(ftpc_user(ftps,user_name)==-1)
-	{
 		return -1;
-	}
 
 	return ftpc_password(ftps,password);
 
@@ -163,20 +154,12 @@ int ftpc_passive(struct ftp_server *ftps)
 	//0 - success
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_passive:ftp_server not connected.");
-		return -1;
-	}
-
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_passive:user not logged in.");
-		return -1;
-	}
-
-
 	
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_passive"))
+		return -1;
+	
+
 	char *command_str;
 	struct ftp_response *fres;
 	
@@ -267,17 +250,10 @@ int ftpc_pwd(struct ftp_server *ftps,struct ftp_fs **ftfs)
 	//0 - success
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_pwd:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_pwd"))
 		return -1;
-	}
-
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_pwd:user not logged in.");
-		return -1;
-	}
+	
 	
 	if((*ftfs = (struct ftp_fs *)malloc(sizeof(struct ftp_fs)))==NULL)
 	{	
@@ -373,17 +349,10 @@ int ftpc_type(struct ftp_server *ftps,const int type)
 	//0 - success
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_type:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_pwd"))
 		return -1;
-	}
 
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_type:user not logged in.");
-		return -1;
-	}
 
 	char *command_str,
 			type_str[32]={'\0'};
@@ -546,17 +515,9 @@ int ftpc_active(struct ftp_server *ftps)
 	//0 - success
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_active:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_active"))
 		return -1;
-	}
-
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_active:user not logged in.");
-		return -1;
-	}
 
 
 	struct sockaddr_in *sok;
@@ -696,17 +657,10 @@ int ftpc_mode(struct ftp_server *ftps,const int type)
 	//0 - success
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_mode:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_mode"))
 		return -1;
-	}
 
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_mode:user not logged in.");
-		return -1;
-	}
 
 	char *command_str,
 			mode_str[32]={'\0'};
@@ -754,18 +708,12 @@ int ftpc_cwd(struct ftp_server *ftps,const char *wd)
 	//return value
 	//0 - success
 	//-1- failed
+	
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftpc_cwd:ftp_server not connected.");
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_cwd"))
 		return -1;
-	}
 
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-	{
-		log_error("ftpc_cwd:user not logged in.");
-		return -1;
-	}
 	
 	char *command_str;
 	struct ftp_response *fres;

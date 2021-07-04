@@ -192,13 +192,11 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 	//0 -success
 	//-1-failed
 
-        if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-                log_error("ftpd_list:ftp_server not connected.");
+
+	
+
+        if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpd_list"))
                 return -1;
-        }
-
-
 
 
 	//establish data connection
@@ -300,16 +298,11 @@ int ftpd_connect(struct ftp_server *ftps,int contype)
 	//0  - success
 	//-1 - failed
 
-        if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-        {
-                log_error("ftpd_connect:no control connection.");
+
+
+        if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED |
+					FTPS_LOGGED_IN,"ftpd_connect"))
                 return -1;
-        }
-	if(!(ftps->server_status & FTPS_LOGGED_IN))
-        {
-                log_error("ftpd_connect:not logged in. ");
-                return -1;
-        }
 
 	if(ftps->server_status & FTPS_DATA_CONNECTED)
 	{
@@ -411,11 +404,11 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 	//0 -success
 	//-1-failed
 
-        if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-                log_error("ftpd_tetrieve_file:ftp_server not connected.");
+
+	
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpd_retrieve"))
                 return -1;
-	}
 
 
 	//establish data connection

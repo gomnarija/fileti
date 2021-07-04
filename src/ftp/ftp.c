@@ -18,6 +18,8 @@
 
 
 #include "ftp.h"
+#include "ftp_control.h"
+#include "ftp_data.h"
 #include "../utils/log.h"
 #include "stdlib.h"
 #include "string.h"
@@ -75,9 +77,9 @@ int ftp_server_info(const char *server_name,const char *server_port,struct ftp_s
 void ftp_server_free(struct ftp_server *ftps)
 {
 	if(ftps->server_status & FTPS_CONTROL_CONNECTED)
-		close(ftps->cc_socket);
+		ftpc_disconnect(ftps);
 	if(ftps->server_status & FTPS_DATA_CONNECTED)
-		close(ftps->dc_socket);
+		ftpd_disconnect(ftps);
 
 
 	
@@ -318,13 +320,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	//0 - succes
 	//-1- failed
 
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftp_command:ftp_server not connected.");
-		if(command)free(command);
-		return -1;
-	}
-
+	
 	char *response;//raw response string, returned from ftp_receive
 	struct ftp_response *curr_res;
 
@@ -519,3 +515,26 @@ void *ftp_accept(void *arg)
 	return NULL;
 
 }
+
+
+int ftp_check_server_status(struct ftp_server *ftps,const int status,const char *caller)
+{
+
+	if(FTPS_CONTROL_CONNECTED & status && !(FTPS_CONTROL_CONNECTED & ftps->server_status))
+	{
+		log_error(caller);
+		log_error("server status: no control connection. ");
+	}
+	if(FTPS_DATA_CONNECTED & status && !(FTPS_DATA_CONNECTED & ftps->server_status))
+	{
+		log_error(caller);
+		log_error("server status: no data connection. ");
+	}
+	if(FTPS_LOGGED_IN & status && !(FTPS_LOGGED_IN & ftps->server_status))
+	{
+		log_error(caller);
+		log_error("server status: not logged in. ");
+	}
+	return (ftps->server_status&status)==status;
+}
+
