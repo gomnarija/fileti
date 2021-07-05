@@ -25,7 +25,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
+int parse_mlsx(char *buffer,struct ftp_file **fifi)
 {
 	//fills ftfs with parsed MLSD/MLST response info
 	//return value
@@ -46,13 +46,15 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 	if((curr_file = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
 		return -1;
 
-	while(ftfs->files)
+
+	//clear if not empty
+	while(*fifi)
 	{
 	
 		struct ftp_file *tmp;
-		tmp = ftfs->files;
+		tmp = *fifi;
 	
-		ftfs->files = ftfs->files->next;	
+		*fifi = (*fifi)->next;	
 
 		if(tmp->name)
 			free(tmp->name);
@@ -63,10 +65,10 @@ int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
 			free(tmp);
 	}
 
-	ftfs->files = curr_file;
-	ftfs->files->next = NULL;
-	ftfs->files->name = NULL;
-	ftfs->files->type = NULL;
+	*fifi = curr_file;
+	curr_file->next = NULL;
+	curr_file->name = NULL;
+	curr_file->type = NULL;
 
 
 
@@ -269,8 +271,8 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 
 
 
-
-	if(parse_mlsx(buffer,ftfs)==-1)
+	
+	if(parse_mlsx(buffer,&(ftfs->files))==-1)
 	{
 		log_error("ftpd_list: can't parse response.");
 		free(buffer);
@@ -361,27 +363,25 @@ int ftpc_ent_info(struct ftp_server *ftps,const char *ent,struct ftp_file **fifi
 	*++endp = '\0';
 	
 
-	struct ftp_fs *ftfs = (struct ftp_fs*)malloc(sizeof(struct ftp_fs));
-	if(!ftfs)
+	*fifi = (struct ftp_file *)malloc(sizeof(struct ftp_file));
+	if(!*fifi)
 	{
-		log_error("ftpc_ent_into: malloc failed.");
-		free(buffer);
+		log_error("ftpc_ent_info: malloc failed");
 		return -1;
 	}
-	ftfs->files = NULL;	
-	
-	if(parse_mlsx(startp,ftfs)==-1)
+
+	(*fifi)->next = NULL;
+	(*fifi)->name = NULL;
+	(*fifi)->type = NULL;	
+	if(parse_mlsx(startp,fifi)==-1)
 	{
 		log_error("ftpc_ent_info: can't parse response.");
 		free(buffer);
 		return -1;
 	}
 
-	*fifi = ftfs->files;
-
 	log_message("ftpc_ent_info: success. ");	
 	free(buffer);
-	free(ftfs);//don't free ftfs->files
 
 	return 0;
 
