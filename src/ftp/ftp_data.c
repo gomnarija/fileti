@@ -26,271 +26,9 @@
 #include "stdio.h"
 #include "string.h"
 #include "unistd.h"
+#include "sys/stat.h"
 
 
-int parse_mlsx(char *buffer,struct ftp_fs *ftfs)
-{
-	//fills ftfs with parsed MLSD/MLST response info
-	//return value
-	//0 -success
-	//-1-failed
-	
-	//MLSX response format:
-	//fact=value;fact=value; pathname\n
-	//fact=value;fact=value; pathname\n
-
-	char *curr_line,
-		*new_line;
-	curr_line = buffer;
-	
-
-
-	struct ftp_file *curr_file;
-	
-	if((curr_file = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
-		return -1;
-
-	while(ftfs->files)
-	{
-	
-		struct ftp_file *tmp;
-		tmp = ftfs->files;
-	
-		ftfs->files = ftfs->files->next;	
-
-		if(tmp->name)
-			free(tmp->name);
-		if(tmp->type)
-			free(tmp->type);
-		
-		if(tmp)
-			free(tmp);
-	}
-
-	ftfs->files = curr_file;
-	ftfs->files->next = NULL;
-	ftfs->files->name = NULL;
-	ftfs->files->type = NULL;
-
-
-
-
-	
-	//fact=value;fact=value;fact=value;fact=value; name\nfact=value;fact=value; name\n
-
-	//c						    n
-	//l   m     r
-
-
-	if((new_line = strchr(buffer,'\n'))==NULL)
-		return -1;
-
-	do//line by line
-	{
-		*new_line = '\0';//terminate at '\n'	
-	
-		char *left,
-			*mid,// '='
-			  *right;
-		
-		left = curr_line;
-		if((right = strchr(curr_line,';'))==NULL)
-			return -1;
-		
-		if((mid = strchr(curr_line,'='))==NULL)
-			return -1;
-
-		do//expression by expression, fact=value;
-		{//			      l   m     r
-			
-			*mid   = '\0';
-			*right = '\0';
-
-			char *fact,//left of '='
-				*value;//right of '='
-
-			if((fact = (char*)malloc(strlen(left)+1))==NULL ||
-				(value = (char*)malloc(strlen(mid+1)+1))==NULL)
-				return -1;
-
-	
-
-			snprintf(fact,strlen(left)+1,"%s",left);//left to mid
-			snprintf(value,strlen(mid+1)+1,"%s",mid+1);//mid to right
-
-			
-			if(!strcmp(fact,"type"))
-			{
-				if((curr_file->type = (char *)malloc(strlen(value)+1))==NULL)
-				{
-					free(fact);
-					free(value);
-					return -1;
-				}
-
-				snprintf(curr_file->type,strlen(value)+1,"%s",value);
-			}
-			else if(!strcmp(fact,"sizd") || !strcmp(fact,"size"))
-			{
-				curr_file->size = strtol(value,NULL,10);
-			}
-			free(fact);
-			free(value);
-
-			left = right+1;
-			right = strchr(left,';');
-			mid = strchr(left,'=');
-			
-		
-		}while(right!=NULL);
-		
-		if(*left==' ')//name, format is face=value; name
-				//			   l   
-		{
-			if((curr_file->name = (char *)malloc(strlen(left+1)))==NULL)
-				return -1;
-			snprintf(curr_file->name,strlen(left+1),"%s",left+1);
-		}
-		
-
-		curr_line = new_line +1;
-		new_line = strchr(curr_line,'\n');
-	
-			
-		if(new_line != NULL)
-		{
-			if((curr_file->next = (struct ftp_file*)malloc(sizeof(struct ftp_file)))==NULL)
-					return -1;
-			else
-			{
-				curr_file = curr_file->next;
-			}
-		}
-		else
-		{
-			curr_file->next =NULL;
-			break;
-		}	
-
-
-	}while(1);
-	
-	return 0;
-
-	
-	
-}
-
-
-
-
-int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
-{
-	//MLSD command, fills ftp_fs
-	//sends LIST command,waits for server to confirm that data connection is closed
-	//return value
-	//0 -success
-	//-1-failed
-
-
-	
-
-        if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpd_list"))
-                return -1;
-
-
-	//establish data connection
-	if(ftpd_connect(ftps,FTPD_ACTIVE) == -1)
-	{
-		return -1;
-	}
-	
-	struct ftp_response *fres;
-
-        char *command_str;
-        if(ftp_command_str(&command_str,"MLSD",dir) == -1)
-        {
-		 return -1;
-		 ftpd_disconnect(ftps);
-	}
-        if(ftp_command(ftps,&fres,command_str)==-1)
-        {
-                log_error("ftpc_list: MLSD command failed.");
-                ftp_response_free(fres);
-               
-		ftpd_disconnect(ftps);
-	        return -1;
-        }
-	 
-
-	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
-	{
-                log_error("ftpd_list:no data connection. ");
-                return -1; 
-        }
-
-
-	
-	if(fres->code != FTPC_DATA_OPENING)
-	{
-		ftp_command_failed(fres->code,fres->message,"MLSD");
-                ftp_response_free(fres);
-              
-	        return -1;
-	}
-
-
-
-
-	ftp_response_free(fres);
-	
-	char *buffer;
-	int response_size = -1;
-
-
-	int rcv;
-	if((rcv=ftp_receive(ftps,ftps->dc_socket,&buffer,&response_size)) == -1)
-	{	
-		log_error("ftpd_list:ftp_receive failed.");
-		return -1;
-	}
-	else if(rcv==-2)
-	{
-		log_warning("ftpd_list: ftp_receive read nothing. ");
-		ftpd_disconnect(ftps);
-		return -1;
-	}
-
-	//terminate buffer
-	if((buffer = (char*) realloc(buffer,response_size+1))==NULL)
-	{	
-		log_error("ftpd_list: realloc() failed.");
-		ftpd_disconnect(ftps);
-		return -1;
-	}
-	buffer[response_size++] = '\0';
-
-
-
-
-
-	if(parse_mlsx(buffer,ftfs)==-1)
-	{
-		log_error("ftpd_list: can't parse response.");
-		free(buffer);
-		ftpd_disconnect(ftps);
-		return -1;
-	}
-
-	//close data connection
-	if(ftpd_disconnect(ftps) == -1)
-		return -1;
-
-
-	log_message("ftpd_list: success. ");	
-	free(buffer);
-	return 0;
-}
 
 
 int ftpd_connect(struct ftp_server *ftps,int contype)
@@ -410,15 +148,25 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 {
 	//RETR command, returns file over data connection
 	//return value
+	//fails if file exists
 	//0 -success
 	//-1-failed
 
 
 	
 
-	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpd_retrieve"))
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | FTPS_LOGGED_IN,"ftpd_retrieve_file"))
                 return -1;
 
+
+		
+	struct stat sta = {0};
+	if(stat(dst_name,&sta)!=-1)
+	{
+		log_error("ftpd_retrieve_file: file already exists. ");
+		log_error(dst_name);
+		return -1;	
+	}
 
 	//establish data connection
 	if(ftpd_connect(ftps,FTPD_ACTIVE) == -1)
@@ -509,3 +257,120 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 }
 
 
+int ftpd_retrieve_dir(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+{
+	//RETR command, returns dir over data connection
+	//fails if dir exists
+	//return value
+	//0 -success
+	//-1-failed
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | FTPS_LOGGED_IN,"ftpd_retrieve_dir"))
+                return -1;
+
+
+	struct ftp_fs	*ftfs;
+	struct ftp_file *curr;
+	
+	ftfs = (struct ftp_fs*)malloc(sizeof(struct ftp_fs));
+
+	ftfs->files = NULL;
+
+	ftfs->pwd = (char*)malloc(strlen(src_name)+1);
+
+
+	if(ftfs==NULL || ftfs->pwd == NULL)
+	{
+	
+		log_error("ftpd_retrieve_dir: malloc() failed. ");
+		return -1;
+	}
+
+
+	snprintf(ftfs->pwd,strlen(src_name)+1,"%s",src_name);
+
+	if(ftpd_list(ftps,ftfs,src_name) == -1)
+	{
+		ftp_fs_free(ftfs);
+		return -1;
+	}
+	curr = ftfs->files;
+
+
+
+	if(curr)//exists on the server
+	{
+		struct stat sta = {0};
+		if(stat(dst_name,&sta)==-1)
+			mkdir(dst_name,777);//TODO:maybe implement permissions
+		else
+		{
+			log_error("ftpd_retrieve_dir: dir already exists. ");
+			log_error(dst_name);
+			ftp_fs_free(ftfs);
+			return -1;	
+		}
+	}
+	else
+	{
+		log_error("ftpd_retrieve_dir: dir doesn't exist. ");
+		ftp_fs_free(ftfs);
+		return -1;
+	}
+	
+
+	while(curr)
+	{
+		char *src = (char*)malloc(strlen(src_name)+strlen(curr->name)+2);
+		char *dst = (char*)malloc(strlen(dst_name)+strlen(curr->name)+2);
+		if(!src || !dst)
+			break;
+
+		snprintf(src,strlen(src_name)+strlen(curr->name)+2,"%s/%s",src_name,curr->name);
+		snprintf(dst,strlen(dst_name)+strlen(curr->name)+2,"%s/%s",dst_name,curr->name);
+
+
+		if(!strcmp(curr->type,"file"))
+			ftpd_retrieve_file(ftps,src,dst);	
+	
+		if(!strcmp(curr->type,"dir"))
+			ftpd_retrieve_dir(ftps,src,dst);
+	
+		curr = curr->next;
+		free(src);
+		free(dst);
+	}
+	
+	
+
+	ftp_fs_free(ftfs);
+	return 0;
+}
+
+int ftpd_retrieve(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+{
+	//RETR command, returns dir/file over data connection
+	//fails if dir exists
+	//return value
+	//0 -success
+	//-1-failed
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | FTPS_LOGGED_IN,"ftpd_retrieve"))
+                return -1;
+
+
+	struct ftp_file *fifi;
+	if(ftpc_ent_info(ftps,src_name,&fifi) == -1)
+	{
+		log_error("ftpd_retrieve: ent_info failed");
+		return -1;
+	}	
+
+	if(!strcmp(fifi->type,"file"))
+		ftpd_retrieve_file(ftps,src_name,dst_name);
+	if(!strcmp(fifi->type,"dir"))
+		ftpd_retrieve_dir(ftps,src_name,dst_name);
+
+	return 0;
+
+}
