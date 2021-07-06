@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include "unistd.h"
 
 int parse_mlsx(char *buffer,struct ftp_file **fifi)
 {
@@ -226,11 +227,20 @@ int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
         }
 	 
 
-	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
+	while(!(ftps->server_status & FTPS_DATA_CONNECTED))
 	{
-                log_error("ftpd_list:no data connection. ");
-                return -1; 
+		if(ftps->dc_socket == -1)
+                 {
+			 log_error("ftpd_list: no data connection. ");
+               	 	 return -1;
+		}
+		else
+		{
+			log_warning("ftpd_list: waiting for data connection");
+			sleep(1);	
+		}
         }
+
 
 
 	
