@@ -190,10 +190,18 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
         }
 	 
 
-	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
+	while(!(ftps->server_status & FTPS_DATA_CONNECTED))
 	{
-                log_error("ftpd_retrieve_file: no data connection. ");
-                return -1; 
+		if(ftps->dc_socket == -1)
+                 {
+			 log_error("ftpd_retrieve_file: no data connection. ");
+               	 	 return -1;
+		}
+		else
+		{
+			log_warning("ftpd_retrieve_file: waiting for data connection");
+			sleep(1);	
+		}
         }
 
 

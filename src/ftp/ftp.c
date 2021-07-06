@@ -211,6 +211,7 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg,const int siz
 		return -1;
 
 	}
+	printf("%s\n",msg);
 	return 0;
 
 }
@@ -497,11 +498,15 @@ void *ftp_accept(void *arg)
 	if(rt == 0)
 	{
 		log_error("ftp_accept: timedout\n");
+		close(ftps->dc_socket);
+		ftps->dc_socket = -1;
 		return NULL;
 	}
 	else if (rt==-1)
 	{
 		log_error("ftp_accept: poll failed\n");
+		close(ftps->dc_socket);
+		ftps->dc_socket = -1;
 		return NULL;
 	}
 
@@ -512,6 +517,8 @@ void *ftp_accept(void *arg)
 	if(nfd == -1)
 	{
 		log_error("ftp_accept: accept failed. ");
+		close(ftps->dc_socket);
+		ftps->dc_socket = -1;
 		return NULL;
 	}
 	else
