@@ -24,6 +24,6 @@
 
 
 int io_write(const char *,const char *,int);
-
+int io_read(const char *,char **,int *,FILE **);
 
 #endif

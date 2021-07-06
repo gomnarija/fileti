@@ -29,8 +29,6 @@
 #include "sys/stat.h"
 
 
-
-
 int ftpd_connect(struct ftp_server *ftps,int contype)
 {
 	//attempts data connection.
@@ -184,7 +182,7 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 	}
         if(ftp_command(ftps,&fres,command_str)==-1)
         {
-                log_error("ftpc_retrieve_file: RETR command failed.");
+                log_error("ftpd_retrieve_file: RETR command failed.");
                 ftp_response_free(fres);
                
 		ftpd_disconnect(ftps);
@@ -371,6 +369,107 @@ int ftpd_retrieve(struct ftp_server *ftps,const char *src_name,const char *dst_n
 	if(!strcmp(fifi->type,"dir"))
 		ftpd_retrieve_dir(ftps,src_name,dst_name);
 
+	return 0;
+
+}
+
+int ftpd_store_file(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+{
+	//STOR command, sends file over data connection
+	//return value
+	//overwrites if file exists
+	//0 -success
+	//-1-failed
+
+
+	
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | FTPS_LOGGED_IN,"ftpd_store_file"))
+                return -1;
+
+
+	//establish data connection
+	if(ftpd_connect(ftps,FTPD_ACTIVE) == -1)
+	{
+		return -1;
+	}
+	
+	struct ftp_response *fres;
+
+        char *command_str;
+        if(ftp_command_str(&command_str,"STOR",dst_name) == -1)
+        {
+		 return -1;
+		 ftpd_disconnect(ftps);
+	}
+        if(ftp_command(ftps,&fres,command_str)==-1)
+        {
+                log_error("ftpd_store_file: STOR command failed.");
+                ftp_response_free(fres);
+		ftpd_disconnect(ftps);
+	        return -1;
+        }
+	 
+
+	if(!(ftps->server_status & FTPS_DATA_CONNECTED))
+	{
+                log_error("ftpd_retrieve_file: no data connection. ");
+                return -1; 
+        }
+
+
+	
+	if(fres->code != FTPC_DATA_OPENING)
+	{
+		ftp_command_failed(fres->code,fres->message,"STOR");
+                ftp_response_free(fres);
+              
+	        return -1;
+	}
+
+	ftp_response_free(fres);
+	char *buffer;
+	int snt_size=8000;
+	FILE *fp = NULL;
+
+	int snt = snt_size;
+	do
+	{
+		if(!(buffer = (char *)malloc(snt_size)))
+		{
+			log_error("ftpd_store_file: malloc() failed.");
+			break;
+		}
+
+		if(io_read(src_name,&buffer,&snt,&fp) == -1)
+		{
+			free(buffer);
+			break;
+		}
+
+		if((ftp_send(ftps,ftps->dc_socket,buffer,snt)) == -1)
+		{
+			log_error("ftpd_store_file: ftp_send() failed");
+			free(buffer);
+			ftpd_disconnect(ftps);
+			break;
+		}
+		
+		free(buffer);
+
+	}
+	while(1);
+
+
+
+	close(ftps->dc_socket);
+
+	//close data connection
+	if(ftpd_disconnect(ftps) == -1)
+		return -1;
+
+
+	log_message("ftpd_retrieve_file: success. ");	
 	return 0;
 
 }

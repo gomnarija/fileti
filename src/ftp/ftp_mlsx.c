@@ -308,7 +308,7 @@ int ftpc_ent_info(struct ftp_server *ftps,const char *ent,struct ftp_file **fifi
 		return -1;
 
 
-	if(ftp_send(ftps,ftps->cc_socket,command_str) == -1)
+	if(ftp_send(ftps,ftps->cc_socket,command_str,strlen(command_str)) == -1)
 	{
 		log_error("ftpc_ent_info: ftp_send() failed.");
 		if(command_str)free(command_str);

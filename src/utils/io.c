@@ -18,7 +18,7 @@
 
 
 #include "io.h"
-
+#include "stdlib.h"
 
 
 int io_write(const char * file_name,const char *buffer,int buff_size)
@@ -33,4 +33,29 @@ int io_write(const char * file_name,const char *buffer,int buff_size)
 	fclose(fp);	
 
 	return 0;
+}
+
+
+int io_read(const char * file_name,char **buffer,int *buff_size,FILE **fp)
+{
+	if(!(*fp))
+	{
+		*fp = fopen(file_name,"r");
+		if(!(*fp))
+			return -1;
+	}
+	if((*buff_size=fread(*buffer,sizeof(char),*buff_size,*fp)) <= 0)
+	{
+		fclose(*fp);
+		return -1;
+	}
+	
+	if(!(*buffer=realloc(*buffer,*buff_size)))
+		return -1;	
+
+
+	return 0;
+	
+	
+
 }

@@ -186,7 +186,7 @@ int ftp_connect(struct addrinfo *server_info,int *socket_fd)
 	return 0;	
 }
 
-int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
+int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg,const int size)
 {
 	//attempts to send a message over socket
 	//return value:
@@ -202,7 +202,7 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
 
 	int flags = 0,bytes_sent;
 
-	if((bytes_sent=send(socket_fd,msg,strlen(msg),flags))==-1)
+	if((bytes_sent=send(socket_fd,msg,size,flags))==-1)
 	{
 		char buf[16];
 		sprintf(buf,"errno: %d",errno);
@@ -211,7 +211,6 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg)
 		return -1;
 
 	}
-	//log_message(msg);
 	return 0;
 
 }
@@ -343,7 +342,7 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	curr_res->next = NULL;
 
 
-	if(ftp_send(ftps,ftps->cc_socket,command) == -1)
+	if(ftp_send(ftps,ftps->cc_socket,command,strlen(command)) == -1)
 	{
 		log_error("ftp_command: ftp_send() failed.");
 		if(command)free(command);
@@ -381,7 +380,6 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		return -1;
 	}
 	response[response_size++] = '\0';
-
 
 
 
@@ -464,8 +462,12 @@ int ftp_command_str(char **cstr,const char *command,const char *arguments)
 	if(!(*cstr))
 		return -1;
 
-	snprintf(*cstr,strlen(command)+strlen(arguments)+4,"%s %s\r\n",command,arguments);
-
+	if(strlen(arguments)!=0)
+		snprintf(*cstr,strlen(command)+strlen(arguments)+4,"%s %s\r\n",command,arguments);
+	else
+	{
+		snprintf(*cstr,strlen(command)+3,"%s\r\n",command);
+	}
 	return 0;
 
 }

@@ -28,6 +28,6 @@ int ftpd_list(struct ftp_server *,struct ftp_fs *,const char *);
 int ftpd_retrieve(struct ftp_server *,const char *,const char *);
 int ftpd_retrieve_file(struct ftp_server *,const char *,const char *);
 int ftpd_retrieve_dir(struct ftp_server *,const char *,const char *);
-
+int ftpd_store_file(struct ftp_server *,const char *,const char *);
 
 #endif

@@ -121,7 +121,7 @@ void ftp_response_free(struct ftp_response *);
 int  ftp_receive(struct ftp_server *,int, char **,int *);
 int  ftp_server_info(const char *,const char *,struct ftp_server **);
 void ftp_server_free(struct ftp_server *);
-int  ftp_send(struct ftp_server *,int,const char *);
+int  ftp_send(struct ftp_server *,int,const char *,const int);
 
 
 
