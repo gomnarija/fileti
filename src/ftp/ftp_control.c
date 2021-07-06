@@ -897,3 +897,45 @@ int ftpc_structure(struct ftp_server *ftps,const int stru)
 
 }
 
+int ftpc_cdup(struct ftp_server *ftps)
+{
+	//attemps CDUP command,
+	//return value
+	//0 - success
+	//-1- failed
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_cdup"))
+		return -1;
+	
+	
+	char *command_str;
+	struct ftp_response *fres;
+	
+	if(ftp_command_str(&command_str,"CDUP","") == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_cdup: CDUP command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+
+	if(fres->code != FTPC_COMMAND_OK && fres->code != FTPC_FILE_OK)
+	{		
+	
+		ftp_command_failed(fres->code,fres->message,"CDUP");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+	log_message("ftpc_cdup: success.");
+	ftp_response_free(fres);
+
+	return 0;
+
+
+
+}
