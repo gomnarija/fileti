@@ -1,5 +1,5 @@
 CC =gcc
-CFLAGS=-Wall -g -lpthread 
+CFLAGS=-Wall -g -pthread 
 
 BIN=fileti
 
