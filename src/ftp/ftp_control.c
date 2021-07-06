@@ -613,20 +613,20 @@ int ftpc_mode(struct ftp_server *ftps,const int type)
 
 
 	char *command_str,
-			mode_str[32]={'\0'};
+			mode_str[2]={'\0'};
 	struct ftp_response *fres;
 	
 	switch(type)
 	{
 		case FTP_MODE_STREAM:
-			snprintf(mode_str,32,"%s","S");
+			snprintf(mode_str,2,"%s","S");
 			break;
 	
 		case FTP_MODE_BLOCK:
-			snprintf(mode_str,32,"%s","B");
+			snprintf(mode_str,2,"%s","B");
 			break;
 		case FTP_MODE_COMPRESSED:
-			snprintf(mode_str,32,"%s","C");
+			snprintf(mode_str,2,"%s","C");
 			break;
 		default:	
 			log_error("ftcp_mode: non existant mode.");
@@ -836,3 +836,64 @@ int ftpc_rmdir(struct ftp_server *ftps,const char *dir)
 
 
 }
+int ftpc_structure(struct ftp_server *ftps,const int stru)
+{
+	//attemps STRU command,
+	//return value
+	//0 - success
+	//-1- failed
+
+	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED | 
+						FTPS_LOGGED_IN,"ftpc_structure"))
+		return -1;
+
+
+	char *command_str,
+			stru_str[2]={'\0'};
+	struct ftp_response *fres;
+	
+	switch(stru)
+	{
+		case FTP_STRUCT_FILE:
+			snprintf(stru_str,2,"%s","F");
+			break;
+	
+		case FTP_STRUCT_RECORD:
+			snprintf(stru_str,2,"%s","R");
+			break;
+		case FTP_STRUCT_PAGE:
+			snprintf(stru_str,2,"%s","P");
+			break;
+		default:	
+			log_error("ftcp_structure: non existant mode.");
+			return -1;
+	}
+
+	if(ftp_command_str(&command_str,"STRU",stru_str) == -1)
+		return -1;
+
+	if(ftp_command(ftps,&fres,command_str)==-1)
+	{
+		log_error("ftpc_structure: STRU command failed.");
+		ftp_response_free(fres);
+		return -1;
+	}
+	
+	if(fres->code != FTPC_COMMAND_OK)
+	{		
+	
+		ftp_command_failed(fres->code,fres->message,"STRU");
+                ftp_response_free(fres);
+                return -1;
+	}
+
+
+        log_message("ftpc_structure: success.");
+	log_message(fres->message);
+
+	ftp_response_free(fres);
+
+	return 0;
+
+}
+

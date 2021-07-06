@@ -37,6 +37,7 @@ int ftpc_passive(struct ftp_server *);
 int ftpc_pwd(struct ftp_server *,struct ftp_fs **);
 int ftpc_rm(struct ftp_server *,const char *);
 int ftpc_rmdir(struct ftp_server *,const char *);
+int ftpc_structure(struct ftp_server *,const int);
 int ftpc_type(struct ftp_server *,const int);
 int ftpc_user(struct ftp_server *,const char *);
 

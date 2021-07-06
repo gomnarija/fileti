@@ -43,6 +43,10 @@
 #define FTP_MODE_COMPRESSED	 113//not supported
 
 
+#define FTP_STRUCT_FILE		456
+#define FTP_STRUCT_RECORD	457
+#define FTP_STRUCT_PAGE		458
+
 #define FTPD_ACTIVE		69
 #define FTPD_PASSIVE		70
 
