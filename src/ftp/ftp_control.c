@@ -500,11 +500,17 @@ int ftpc_active(struct ftp_server *ftps)
 		return -1;
 
 
-	struct sockaddr_in sok;
+	struct sockaddr_in sok,//bind and dc socket info, get port 
+			   sokic;//cc socket info, get ip 
+
 	memset(&sok,0,sizeof sok);
+	memset(&sokic,0,sizeof sok);
+
 	sok.sin_port = htons(0);//0 port will be bound to random
+
 	socklen_t ssize = sizeof sok;
-	
+	socklen_t sis = sizeof sokic;
+
 	//listening socket on random port
 	if((ftps->dc_socket = socket(AF_INET,
 					 SOCK_STREAM | SOCK_NONBLOCK,
@@ -516,7 +522,8 @@ int ftpc_active(struct ftp_server *ftps)
 
 	//get random avaliable port
 	if(bind(ftps->dc_socket,(struct sockaddr*)&sok,ssize) == -1 ||
-		getsockname(ftps->dc_socket,(struct sockaddr*)&sok,&ssize) == -1)
+	     getsockname(ftps->dc_socket,(struct sockaddr*)&sok,&ssize) == -1 ||
+		getsockname(ftps->cc_socket,(struct sockaddr*)&sokic,&sis) == -1)
 	{
 		log_error("ftpc_active: binding failed");
 		return -1;
@@ -529,28 +536,10 @@ int ftpc_active(struct ftp_server *ftps)
 		return -1;
 	}
 	
-	char host[256];
-	struct hostent *hent;
-
-	//get local ip
-	if(gethostname(host,sizeof host) == -1)
-	{
-		log_error("ftpc_active: gethostname() failed");
-		return -1;
-	}
-	
-	hent = gethostbyname(host);
-	if(!hent)
-	{
-		log_error("ftpc_active: gethostbyname() failed. ");
-		return -1;
-	}
-
-	
 	char *ip;
 	int port;
 	
-	ip = inet_ntoa(*((struct in_addr*)hent->h_addr_list[0]));
+	ip = inet_ntoa((struct in_addr)sokic.sin_addr);
 	port = htons(sok.sin_port);
 	
 
