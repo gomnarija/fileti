@@ -44,8 +44,8 @@
 
 
 #define FTP_STRUCT_FILE		456
-#define FTP_STRUCT_RECORD	457
-#define FTP_STRUCT_PAGE		458
+#define FTP_STRUCT_RECORD	457//not supported
+#define FTP_STRUCT_PAGE		458//not supported
 
 #define FTPD_ACTIVE		69
 #define FTPD_PASSIVE		70
@@ -99,7 +99,8 @@ struct ftp_file
 {
 	char *name;
 	char *type;
-	int size;
+	int  size;
+	int  perms;
 	struct ftp_file *next;	
 };
 

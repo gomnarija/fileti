@@ -142,7 +142,7 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	return 0;
 }
 
-int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *dst_name,const int perms)
 {
 	//RETR command, returns file over data connection
 	//return value
@@ -255,7 +255,7 @@ int ftpd_retrieve_file(struct ftp_server *ftps,const char *src_name,const char *
 }
 
 
-int ftpd_retrieve_dir(struct ftp_server *ftps,const char *src_name,const char *dst_name)
+int ftpd_retrieve_dir(struct ftp_server *ftps,const char *src_name,const char *dst_name,const int perms)
 {
 	//RETR command, returns dir over data connection
 	//fails if dir exists
@@ -300,7 +300,7 @@ int ftpd_retrieve_dir(struct ftp_server *ftps,const char *src_name,const char *d
 	{
 		struct stat sta = {0};
 		if(stat(dst_name,&sta)==-1)
-			mkdir(dst_name,777);//TODO:maybe implement permissions
+			mkdir(dst_name,perms);
 		else
 		{
 			log_error("ftpd_retrieve_dir: dir already exists. ");
@@ -329,10 +329,10 @@ int ftpd_retrieve_dir(struct ftp_server *ftps,const char *src_name,const char *d
 
 
 		if(!strcmp(curr->type,"file"))
-			ftpd_retrieve_file(ftps,src,dst);	
+			ftpd_retrieve_file(ftps,src,dst,perms);	
 	
 		if(!strcmp(curr->type,"dir"))
-			ftpd_retrieve_dir(ftps,src,dst);
+			ftpd_retrieve_dir(ftps,src,dst,perms);
 	
 		curr = curr->next;
 		free(src);
@@ -364,10 +364,11 @@ int ftpd_retrieve(struct ftp_server *ftps,const char *src_name,const char *dst_n
 		return -1;
 	}	
 
+
 	if(!strcmp(fifi->type,"file"))
-		ftpd_retrieve_file(ftps,src_name,dst_name);
+		ftpd_retrieve_file(ftps,src_name,dst_name,fifi->perms);
 	if(!strcmp(fifi->type,"dir"))
-		ftpd_retrieve_dir(ftps,src_name,dst_name);
+		ftpd_retrieve_dir(ftps,src_name,dst_name,fifi->perms);
 
 	return 0;
 

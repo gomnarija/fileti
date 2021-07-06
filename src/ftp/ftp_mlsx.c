@@ -132,6 +132,11 @@ int parse_mlsx(char *buffer,struct ftp_file **fifi)
 			{
 				curr_file->size = strtol(value,NULL,10);
 			}
+			else if(!strcmp(fact,"UNIX.mode"))
+			{
+				curr_file->perms = strtol(value,NULL,8);
+
+			}
 			free(fact);
 			free(value);
 
