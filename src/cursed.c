@@ -16,37 +16,71 @@
 //   along with fileTI; if not see <http://www.gnu.org/licenses/>.
 //
 
-
-#include "ftp/ftp.h"
-#include "ftp/ftp_control.h"
-#include "ftp/ftp_data.h"
-#include "utils/log.h"
-#include "utils/msleep.h"
 #include "cursed.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "unistd.h"
-int main()
+
+int cur_init()
+{
+	setlocale(LC_ALL,"");
+	initscr();
+	cbreak();
+	timeout(0);
+	noecho();
+	keypad(stdscr, TRUE);
+	curs_set(0);
+
+
+	return 0;
+	
+}
+int cur_quit()
+{
+	
+	echo();
+	keypad(stdscr, FALSE);
+	curs_set(1);
+	endwin();
+	
+	return 0;
+}
+int cur_draw_frame()
 {
 
+	
+	int x,y;
+	getmaxyx(stdscr,y,x);
 
-	cur_init();
-	while(1)
-	{
-		cur_draw_frame();
-		refresh();
-		clear();
-		msleep(10);	
+	int sep=x/2,
+		tri = (y/3)*2,
+			bot = y-1;
+		
 
-		if(getch()=='q')
-			break;
-	}
-	cur_quit();
+	mvvline(0,sep,0,bot);	
+	mvhline(tri,0,0,sep);	
+	mvaddch(tri,sep,ACS_RTEE);
+	
+	attron(A_STANDOUT);
+		mvhline(bot,0,' ',x);
+		mvaddstr(bot,1,"fileTI");
+	attroff(A_STANDOUT);
+
+
+
+
 	return 0;
 
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

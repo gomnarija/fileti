@@ -16,37 +16,14 @@
 //   along with fileTI; if not see <http://www.gnu.org/licenses/>.
 //
 
+#ifndef CURSED_H
+#define CURSED_H
 
-#include "ftp/ftp.h"
-#include "ftp/ftp_control.h"
-#include "ftp/ftp_data.h"
-#include "utils/log.h"
-#include "utils/msleep.h"
-#include "cursed.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "unistd.h"
-int main()
-{
+#include "curses.h"
+#include "locale.h"
 
+int cur_init();
+int cur_quit();
+int cur_draw_frame();
 
-	cur_init();
-	while(1)
-	{
-		cur_draw_frame();
-		refresh();
-		clear();
-		msleep(10);	
-
-		if(getch()=='q')
-			break;
-	}
-	cur_quit();
-	return 0;
-
-
-
-}
-
-
-
+#endif
