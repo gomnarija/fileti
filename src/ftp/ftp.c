@@ -211,7 +211,6 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg,const int siz
 		return -1;
 
 	}
-	printf("%s\n",msg);
 	return 0;
 
 }
@@ -566,4 +565,36 @@ void ftp_command_failed(const int code,char *message,const char *command)
         log_error(command);
         log_error(buf);
         log_error(message);
+}
+
+void ftp_fs_select(struct ftp_fs *ftfs,struct ftp_file **fifi,int *sel)
+{
+
+	if(!ftfs)
+	{
+		*fifi = NULL;
+		*sel  = 0;
+		return;
+	}
+	if(*sel < 0)
+		*sel = 0;
+
+
+	int curr=0;
+	*fifi = ftfs->files;
+	if(!*fifi)
+	{
+		*sel = 0;
+		return;
+	}
+	while((*fifi)->next)
+	{
+		if(curr==*sel)
+			return;
+		
+		curr++;
+		*fifi = (*fifi)->next;
+	}
+	*sel = curr;
+		
 }

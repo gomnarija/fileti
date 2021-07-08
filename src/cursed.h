@@ -21,9 +21,17 @@
 
 #include "curses.h"
 #include "locale.h"
+#include "ftp/ftp.h"
 
-int cur_init();
-int cur_quit();
-int cur_draw_frame();
+struct cur_sec
+{
+	int x,y,h,w;
+};
+
+
+void cur_init();
+void cur_quit();
+void cur_draw_frame(struct cur_sec *,struct cur_sec *,struct cur_sec *);
+void cur_fs_fill(const struct cur_sec,const struct ftp_fs *,const int);
 
 #endif
