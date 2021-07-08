@@ -69,7 +69,7 @@ void  cur_draw_frame(struct cur_sec *lsup,struct cur_sec *lsdown,struct cur_sec 
 	//left side top panel
 	lsup->x=  0;
 	lsup->y=  0;
-	lsup->h=  tri-1;
+	lsup->h=  tri;
 	lsup->w=  sep;
 
 	//left side bottom panel
@@ -90,7 +90,7 @@ void  cur_draw_frame(struct cur_sec *lsup,struct cur_sec *lsdown,struct cur_sec 
 }
 
 
-void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel)
+void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel,const int active,int *offset)
 {
 	if(!ftfs)
 	{
@@ -117,14 +117,16 @@ void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel
 
 
 
-	static int offset = 0;
+	if(active)
+	{
+		if(sel < *offset)
+		{
+			*offset = sel;
+		}
+		if(sel >= *offset+cs.h-l)
+			*offset = sel-(cs.h -l)+1; 
 
-	if(sel < offset)
-		offset = sel;
-	if(sel >= offset+cs.h-l)
-		offset = sel-(cs.h -l)+1; 
-
-	mvaddch(0,0,offset+'0');
+	}
 
 	fifi = ftfs->files;
 	if(!fifi)
@@ -133,16 +135,32 @@ void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel
 
 	while(fifi)
 	{
-		if(curr >= offset)
+		if(curr >= *offset)
 		{
 			if(curr == sel)
+			{
+			  if(active)	
+			  {
 				attron(A_STANDOUT);
 
-			mvaddstr(cs.y+l,cs.x+1,fifi->name);
+					mvaddstr(cs.y+l,cs.x+1,fifi->name);
 	
-			if(curr == sel)
 				attroff(A_STANDOUT);
+		          }
+			  else
+		          {
+				attron(A_BOLD);
+
+					mvaddstr(cs.y+l,cs.x+1,fifi->name);
 	
+				attroff(A_BOLD);
+
+		          }
+			}
+			else
+				mvaddstr(cs.y+l,cs.x+1,fifi->name);
+
+
 			l++;	
 			if(l>=cs.h)
 				return;

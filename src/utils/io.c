@@ -84,6 +84,17 @@ int io_list(struct ftp_fs **ftfs,const char *dir_name)
 		return -1;
 	}
 
+	if(((*ftfs)->pwd = (char*)malloc(strlen(dir_name)+1))==NULL)
+	{	
+		log_error("io_list:malloc() failed.");
+		*ftfs = NULL;
+		return -1;
+	}
+	snprintf((*ftfs)->pwd,strlen(dir_name)+1,"%s",dir_name);
+
+
+
+
 	struct ftp_file **fifi;
 	fifi = &((*ftfs)->files);
 	

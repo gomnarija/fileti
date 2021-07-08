@@ -32,6 +32,6 @@ struct cur_sec
 void cur_init();
 void cur_quit();
 void cur_draw_frame(struct cur_sec *,struct cur_sec *,struct cur_sec *);
-void cur_fs_fill(const struct cur_sec,const struct ftp_fs *,const int);
+void cur_fs_fill(const struct cur_sec,const struct ftp_fs *,const int,const int,int *);
 
 #endif
