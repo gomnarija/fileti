@@ -36,4 +36,5 @@ void cur_draw_frame(struct cur_sec *,struct cur_sec *,struct cur_sec *);
 void cur_fs_fill(const struct cur_sec,const struct ftp_fs *,const int,const int,int *);
 int cur_command(char **);
 
+void cur_serv_info(struct ftp_server *);
 #endif

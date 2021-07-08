@@ -212,7 +212,31 @@ int cur_command(char **buffer)
 	return 0;
 }
 
+void cur_serv_info(struct ftp_server *ftps)
+{
+	int y,x;
+	getmaxyx(stdscr,y,x);
 
+	x++;
+
+	if(!ftps || !(ftps->server_status & FTPS_CONTROL_CONNECTED))
+	{
+		attron(A_STANDOUT);
+		mvaddnstr(y-1,x-13,"disconnected",12);
+		attroff(A_STANDOUT);
+		return;
+	}
+	
+	attron(A_STANDOUT);
+	mvaddnstr(y-1,
+		x-strlen(ftps->cc_info->ai_canonname)-1,
+			ftps->cc_info->ai_canonname,
+				strlen(ftps->cc_info->ai_canonname)+1);
+	attroff(A_STANDOUT);
+
+
+
+}
 
 
 

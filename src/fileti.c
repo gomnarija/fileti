@@ -34,6 +34,10 @@
 void s_connect(struct ftp_server **,struct com_com *);
 void s_login(struct ftp_server **,struct com_com *);
 
+void s_ls(struct ftp_server **,struct ftp_fs **);
+void l_ls(struct ftp_fs **,char **);
+
+
 void l_enter_dir(struct ftp_fs **,struct ftp_file *,int *,char *);
 void s_enter_dir(struct ftp_fs **,struct ftp_file *,int *,struct ftp_server *);
 
@@ -77,16 +81,13 @@ int main()
 	
 	
 
-	//
-	io_pwd(&lwd);
-	io_list(&lfs,lwd);
-	//
 
 	
 	//default select left
 	csel = &sell;
 
-
+	
+	l_ls(&lfs,&lwd);
 
 
 
@@ -111,8 +112,10 @@ int main()
 		cur_fs_fill(rs,sfs,sels,csel == &sels,&rof);
 		
 	
+		cur_serv_info(ftps);
 
 		////
+	
 		selside = csel == &sell?0:1;
 
 	
@@ -151,8 +154,10 @@ int main()
 					s_connect(&ftps,comic);
 				
 				if(!strcmp(comic->command,"login"))
+				{	
 					s_login(&ftps,comic);
-
+					s_ls(&ftps,&sfs);
+				}
 			}
 			
 		}
@@ -212,7 +217,6 @@ void s_enter_dir(struct ftp_fs **ftfs,struct ftp_file *fifi,int *off,struct ftp_
 		ftpc_pwd(ftps,ftfs)  ||
 			ftpd_list(ftps,*ftfs,""))
 	{
-		log_error("s_enter_dir: ftp failed.");
 		free(*ftfs);
 		*ftfs = NULL;
 		return;
@@ -259,3 +263,23 @@ void s_login(struct ftp_server **ftps,struct com_com *comic)
 	ftpc_login(*ftps,user,password);
 
 }
+void s_ls(struct ftp_server **ftps,struct ftp_fs **ftfs)
+{
+	if(!(*ftps) ||
+	    !ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED |
+						FTPS_LOGGED_IN,"s_ls"))
+		return;
+
+	if(!ftpc_pwd(*ftps,ftfs) &&
+		!ftpd_list(*ftps,*ftfs,""))
+		return;
+
+}
+
+void l_ls(struct ftp_fs **ftfs,char **lwd)
+{
+	io_pwd(lwd);
+	io_list(ftfs,*lwd);
+
+}
+
