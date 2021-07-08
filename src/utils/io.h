@@ -27,9 +27,12 @@
 #include "sys/types.h"
 #include "dirent.h"
 #include "string.h"
+#include "unistd.h"
+#include "limits.h"
 
 int io_write(const char *,const char *,int);
 int io_read(const char *,char **,int *,FILE **);
 int io_list(struct ftp_fs **,const char *);
+int io_pwd(char **);
 
 #endif
