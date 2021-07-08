@@ -64,7 +64,7 @@
 #define FTPC_NOT_LOGGED		530
 
 
-#define FTP_TIMEOUT		1000
+#define FTP_TIMEOUT		10000
 
 
 

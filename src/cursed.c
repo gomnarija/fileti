@@ -104,7 +104,7 @@ void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel
 	}
 
 	attron(A_STANDOUT);
-		mvaddstr(cs.y,cs.x,ftfs->pwd);
+		mvaddnstr(cs.y,cs.x,ftfs->pwd,cs.w);
 	attroff(A_STANDOUT);
 
 
@@ -138,27 +138,20 @@ void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel
 		if(curr >= *offset)
 		{
 			if(curr == sel)
-			{
-			  if(active)	
-			  {
-				attron(A_STANDOUT);
+			{  
+				if(active)	
+					attron(A_STANDOUT);
+				  else
+					attron(A_BOLD);
 
-					mvaddstr(cs.y+l,cs.x+1,fifi->name);
-	
-				attroff(A_STANDOUT);
-		          }
-			  else
-		          {
-				attron(A_BOLD);
+			}	
 
-					mvaddstr(cs.y+l,cs.x+1,fifi->name);
-	
-				attroff(A_BOLD);
+			mvaddnstr(cs.y+l,cs.x+1,fifi->name,cs.w-6);
+		
+			mvaddnstr(cs.y+l,cs.x+cs.w-strlen(fifi->type),fifi->type,5);
 
-		          }
-			}
-			else
-				mvaddstr(cs.y+l,cs.x+1,fifi->name);
+			attroff(A_STANDOUT);
+			attroff(A_BOLD);
 
 
 			l++;	

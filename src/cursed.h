@@ -22,6 +22,7 @@
 #include "curses.h"
 #include "locale.h"
 #include "ftp/ftp.h"
+#include "string.h"
 
 struct cur_sec
 {

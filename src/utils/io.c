@@ -105,7 +105,8 @@ int io_list(struct ftp_fs **ftfs,const char *dir_name)
 	while(i<n)
 	{
 		if((*fifi = (struct ftp_file *)malloc(sizeof(struct ftp_file)))==NULL ||
-			((*fifi)->name = (char *)malloc(strlen(dire[i]->d_name)+1))==NULL)
+			((*fifi)->name = (char *)malloc(strlen(dire[i]->d_name)+1))==NULL ||
+			((*fifi)->type = (char *)malloc(5))==NULL)
 		{	
 			log_error("io_list:malloc() failed.");
 			free(dire);
@@ -114,6 +115,7 @@ int io_list(struct ftp_fs **ftfs,const char *dir_name)
 		}
 		(*fifi)->next = NULL;
 		snprintf((*fifi)->name,strlen(dire[i]->d_name)+1,"%s",dire[i]->d_name);
+		snprintf((*fifi)->type,5,"%s",dire[i]->d_type==DT_DIR?"dir":"file");
 		fifi = &((*fifi)->next);
 		i++;		
 		
