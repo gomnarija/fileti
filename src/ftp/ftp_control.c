@@ -407,7 +407,7 @@ int ftpc_connect(struct ftp_server *ftps)
 	}
 
 	buff[response_size-1]='\0';
-	log_message(buff);
+	log_raw(buff,0);
 	free(buff);
 
 

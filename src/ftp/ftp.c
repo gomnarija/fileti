@@ -348,7 +348,11 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		if(command)free(command);
 		return -1;
 	
-	}	
+	}
+	command[strlen(command)-1]=' ';//terminate new line
+	log_raw(">",0);	
+	log_raw(command,1);
+		
 	if(command)free(command);
 
 	
@@ -365,7 +369,9 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		return -1;
 	}
 
-	
+	log_raw("<",0);	
+	log_raw(response,1);
+		
 	//first 3 characters of the response are 
 	// digits representing FTP response code,rest is the response text
 

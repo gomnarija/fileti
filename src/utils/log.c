@@ -18,11 +18,16 @@
 
 
 #include "log.h"
+#include "io.h"
 
 #include "stdio.h"
 #include "time.h"
 #include "stdlib.h"
 #include "string.h"
+
+
+
+int RAW_READY;
 
 void log_log(int log_level,const char *message)
 {
@@ -70,4 +75,41 @@ void log_log(int log_level,const char *message)
 	}
 	free(msg);
 }
+void log_raw(const char *message,const int nl)
+{
+	RAW_READY = 1;
 
+	FILE *fp;
+	if((fp  = fopen(RAW_FILE,"a+")) != NULL)
+	{
+			
+		fprintf(fp,"%s",message);
+		if(nl)
+			fprintf(fp,"\n");
+		fclose(fp);		
+	}
+}
+
+void raw_init()
+{	
+	remove(RAW_FILE);
+}
+
+
+void get_raw(char **buffer)
+{
+	int sz=8000;
+
+	
+	*buffer = (char *)malloc(sz);
+	
+	FILE *fp;
+	if((fp  = fopen(RAW_FILE,"rb")) != NULL)
+	{
+		
+		io_read(RAW_FILE,buffer,&sz,&fp);
+		(*buffer)[sz-1] =  '\0';
+	}
+	fclose(fp);
+	
+}

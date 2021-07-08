@@ -20,7 +20,6 @@
 
 
 
-#include "stdlib.h"
 
 void cur_init()
 {
@@ -198,6 +197,7 @@ int cur_command(char **buffer)
 		
 		if(c == 10 || n>=MAX)
 			break;		
+		
 
 		*cur = c;	
 		cur++;n++;
@@ -239,6 +239,101 @@ void cur_serv_info(struct ftp_server *ftps)
 }
 
 
+void cur_raw_fill(char **buffer,struct cur_sec cs,int *sel,int active,int *offset)
+{
+
+	
+	if(RAW_READY)
+	{
+		if((*buffer)!=NULL)	
+			free(*buffer);
+		get_raw(buffer);
+		
+		RAW_READY = 0;
+
+	}
+
+
+	if(*buffer == NULL)
+		return;
+	
+	char *sp,
+		*ep;
+
+	int curr=0,l=0;
+	
+	cs.h--;
+
+	if(*sel < 0)
+		*sel = 0;
+
+	int i;
+	char *s = *buffer;
+	for(i=0;*s!='\0';s++)
+	{
+		if(*s=='\n')
+			i++;
+	}
+
+	if(*sel > i)
+		*sel = i;
+	
+
+	if(!active)
+	{
+		*sel = i-1;
+	}
+
+	if(*sel < *offset)
+	{
+		*offset = *sel;
+	}
+	if(*sel >= *offset+cs.h)
+		*offset = *sel-(cs.h)+1; 
+
+
+	sp = *buffer;
+	ep = strchr(sp,'\n');
+	
+	if(!ep)
+		return;
+		
+	do
+	{
+		
+		if(curr>=*offset)
+		{
+			
+			if(curr==*sel && active)
+				attron(A_STANDOUT);
+		
+
+			int len = ep!=NULL?ep-sp:s-sp;
+
+			mvaddnstr(cs.y+l,cs.x+1,sp,len<cs.w-1?len:cs.w-1);
+			
+			if(curr==*sel && active)
+				attroff(A_STANDOUT);
+		
+			l++;
+			if(l>=cs.h)
+				break;
+		}	
+		curr++;
+
+		sp = ep;
+			
+		if(!sp)
+			break;
+		sp++;
+		ep = strchr(sp,'\n');
+	
+
+	}while(1);
+
+	
+	
+}
 
 
 

@@ -1,5 +1,5 @@
 CC =gcc
-CFLAGS=-Wall -g -pthread 
+CFLAGS=-Wall -g -pthread -lncurses
 
 BIN=fileti
 
@@ -20,10 +20,10 @@ OBJ  = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
 all: obj_dir $(BIN)
 
 $(BIN):$(OBJ)
-	$(CC) $(CFLAGS) $^ -o $(BIN) 
+	$(CC) $^ $(CFLAGS) -o $(BIN) 
 
 $(OBJ):$(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -c $< $(CFLAGS) -o $@
 
 
 obj_dir: $(OBJ_DIRS)

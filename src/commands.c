@@ -37,7 +37,10 @@ int com_parse(char *raw,struct com_com **comic)
 		{
 			struct com_arg *tmp;
 			tmp = cur;
-			cur = cur->next;
+			if(cur->next)
+				cur = cur->next;
+			else
+				cur = NULL;
 			free(tmp);
 		}
 		free(*comic);
@@ -49,12 +52,9 @@ int com_parse(char *raw,struct com_com **comic)
 	sp = raw;
 	ep = strchr(raw,' ');
 
-	if(ep == NULL)
-		return -1;
 
-	
-	*ep='\0';
-	
+	if(ep)
+		*ep = '\0';
 	
 	if((*comic = (struct com_com*)malloc(sizeof(struct com_com)))==NULL ||
 		((*comic)->command = (char*)malloc(strlen(sp)+1))==NULL)
@@ -62,6 +62,12 @@ int com_parse(char *raw,struct com_com **comic)
 
 	snprintf((*comic)->command,strlen(sp)+1,"%s",sp);
 		
+	if(ep == NULL)
+		return -1;
+
+	
+	
+
 	struct com_arg **args=&((*comic)->args);
 	*args = NULL;
 

@@ -66,10 +66,12 @@ int main()
 	
 	int    sels=0,	//selected server index
 	       sell=0,    //selected local index
+	       selr=0,   //selected raw
 	       *csel;	//curr sel index
 
 	int    lof=0,//left offset
-	       rof=0;//right offset
+	       rof=0,//right offset
+	       raof=0;//raw offset
 
 	int    selside = 0;
 
@@ -77,6 +79,7 @@ int main()
 
 	char   *cbuff=NULL;//command buffer
 
+	char   *rawbuff=NULL;
 
 	
 	
@@ -91,6 +94,9 @@ int main()
 
 
 
+	raw_init();
+	log_raw("fileTI ftp client.",1);
+	log_raw("/help  :)",1);
 
 
 
@@ -110,7 +116,8 @@ int main()
 		
 		cur_fs_fill(lsup,lfs,sell,csel == &sell,&lof);
 		cur_fs_fill(rs,sfs,sels,csel == &sels,&rof);
-		
+	
+		cur_raw_fill(&rawbuff,lsdown,&selr,csel == &selr,&raof);	
 	
 		cur_serv_info(ftps);
 
@@ -132,14 +139,21 @@ int main()
 		if(c==KEY_DOWN)
 			(*csel)++;
 	
-		if(c==' ')
-			csel = csel == &sell?&sels:&sell;
+		if(c==' ' && 
+			ftps != NULL  && ftps->server_status & FTPS_CONTROL_CONNECTED)
+				csel = csel == &sell?&sels:&sell;
 	
+
+		if(c=='z')
+			csel = csel == &selr?&sell:&selr;
+
+
+
 		if(c=='e')
 		{
-			if(selside)//server
+			if(selside==1)//server
 				s_enter_dir(&sfs,sifi,&rof,ftps);
-			else//local
+			else if(!selside)//local
 				l_enter_dir(&lfs,lifi,&lof,lwd);
 		}
 	
@@ -167,7 +181,7 @@ int main()
 		////
 		refresh();
 		clear();
-		msleep(10);	
+		msleep(5);	
 		
 
 
@@ -177,6 +191,13 @@ int main()
 	
 	if(ftps)
 		ftpc_disconnect(ftps);
+	if(sfs)
+		ftp_fs_free(sfs);
+	if(lfs)
+		ftp_fs_free(lfs);
+
+	free(lwd);
+	
 	return 0;
 
 
