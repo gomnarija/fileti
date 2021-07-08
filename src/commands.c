@@ -19,6 +19,8 @@
 #include "commands.h"
 
 
+#include "utils/log.h"
+
 
 int com_parse(char *raw,struct com_com **comic)
 {
@@ -62,23 +64,35 @@ int com_parse(char *raw,struct com_com **comic)
 		
 	struct com_arg **args=&((*comic)->args);
 	*args = NULL;
-	
+
+
+		
+	sp = ep;sp++;
+	ep = strchr(sp,' ');
 	do
 	{
 	
-		sp = ep;sp++;
-	        ep = strchr(sp,' ');
-		if(!ep || *sp == ' ')
-			break;
-		
-		*ep = '\0';
+		if(ep)
+			*ep = '\0';
 	
 		if((*args = (struct com_arg*)malloc(sizeof(struct com_com)))==NULL ||
 		     ((*args)->arg = (char*)malloc(strlen(sp)+1))==NULL)							return -1;
+
 	
+
 		snprintf((*args)->arg,strlen(sp)+1,"%s",sp);
 		args = &((*args)->next);
 		*args = NULL;		
+
+		sp = ep;
+	
+		if(!sp)
+			break;
+		
+		sp++;
+		ep = strchr(ep+1,' ');
+	
+	
 
 	}while(1);
 	
