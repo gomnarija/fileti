@@ -16,24 +16,24 @@
 //   along with fileTI; if not see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef CURSED_H
-#define CURSED_H
 
-#include "curses.h"
-#include "locale.h"
-#include "ftp/ftp.h"
+
+
+#include "stdio.h"
+#include "stdlib.h"
 #include "string.h"
 
-struct cur_sec
+struct com_com
 {
-	int x,y,h,w;
+	char *command;
+	struct com_arg *args;
+};
+
+struct com_arg
+{
+	char *arg;
+	struct com_arg *next;
 };
 
 
-void cur_init();
-void cur_quit();
-void cur_draw_frame(struct cur_sec *,struct cur_sec *,struct cur_sec *);
-void cur_fs_fill(const struct cur_sec,const struct ftp_fs *,const int,const int,int *);
-int cur_command(char **);
-
-#endif
+int com_parse(char *,struct com_com **);

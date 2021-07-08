@@ -168,6 +168,50 @@ void cur_fs_fill(const struct cur_sec cs,const struct ftp_fs *ftfs,const int sel
 }
 
 
+int cur_command(char **buffer)
+{
+	int y,x;
+	getmaxyx(stdscr,y,x);
+
+	x++;
+
+	const int MAX=100;
+
+	mvaddch(y-2,0,'/');
+
+	if(*buffer)
+		free(*buffer);
+
+	if((*buffer = (char *)malloc(MAX))==NULL)
+		return -1;
+
+	echo();
+	timeout(-1);
+
+
+	char *cur = *buffer;	
+	int n=0;
+	do
+	{
+		
+		char c = getch();
+		
+		if(c == 10 || n>=MAX)
+			break;		
+
+		*cur = c;	
+		cur++;n++;
+	
+	}while(1);
+
+	*cur = '\0';
+	
+
+	timeout(0);
+	noecho();
+	return 0;
+}
+
 
 
 
