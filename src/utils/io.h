@@ -20,10 +20,16 @@
 #ifndef IO_H
 #define IO_H
 
+#include "../ftp/ftp.h"
+#include "log.h"
 #include "stdio.h"
-
+#include "stdlib.h"
+#include "sys/types.h"
+#include "dirent.h"
+#include "string.h"
 
 int io_write(const char *,const char *,int);
 int io_read(const char *,char **,int *,FILE **);
+int io_list(struct ftp_fs **,const char *);
 
 #endif

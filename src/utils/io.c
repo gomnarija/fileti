@@ -18,7 +18,6 @@
 
 
 #include "io.h"
-#include "stdlib.h"
 
 
 int io_write(const char * file_name,const char *buffer,int buff_size)
@@ -59,3 +58,60 @@ int io_read(const char * file_name,char **buffer,int *buff_size,FILE **fp)
 	
 
 }
+
+int io_list(struct ftp_fs **ftfs,const char *dir_name)
+{
+
+	if((*ftfs = (struct ftp_fs *)malloc(sizeof(struct ftp_fs)))==NULL)
+	{	
+		log_error("io_list:malloc() failed.");
+		*ftfs = NULL;
+		return -1;
+	}
+	(*ftfs)->files = NULL;
+	(*ftfs)->pwd   = NULL;
+
+	DIR *dp;
+	struct dirent **dire;
+
+	dp = opendir(dir_name);
+	if(!dp)	
+	{
+		free(*ftfs);
+		*ftfs = NULL;
+		log_error("io_list: couldn't open dir.");
+		log_error(dir_name);
+		return -1;
+	}
+
+	struct ftp_file **fifi;
+	fifi = &((*ftfs)->files);
+	
+	int n = scandir(dir_name,&dire,NULL,alphasort);
+
+
+	int i=0;
+	while(i<n)
+	{
+		if((*fifi = (struct ftp_file *)malloc(sizeof(struct ftp_file)))==NULL ||
+			((*fifi)->name = (char *)malloc(strlen(dire[i]->d_name)+1))==NULL)
+		{	
+			log_error("io_list:malloc() failed.");
+			free(dire);
+			closedir(dp);
+			return -1;
+		}
+		(*fifi)->next = NULL;
+		snprintf((*fifi)->name,strlen(dire[i]->d_name)+1,"%s",dire[i]->d_name);
+		fifi = &((*fifi)->next);
+		i++;		
+		
+	}
+
+	closedir(dp);
+	free(dire);
+
+
+	return 0;
+}
+
