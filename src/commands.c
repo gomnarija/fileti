@@ -55,15 +55,15 @@ int com_parse(char *raw,struct com_com **comic)
 
 	if(ep)
 		*ep = '\0';
-	
+		
 	if((*comic = (struct com_com*)malloc(sizeof(struct com_com)))==NULL ||
 		((*comic)->command = (char*)malloc(strlen(sp)+1))==NULL)
 		return -1;	
 
 	snprintf((*comic)->command,strlen(sp)+1,"%s",sp);
-		
+
 	if(ep == NULL)
-		return -1;
+		return 0;
 
 	
 	

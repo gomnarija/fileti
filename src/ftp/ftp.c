@@ -243,12 +243,6 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 	//-1- failed
 	//-2- empty buffer, could be done reading
 
-	
-	if(!(ftps->server_status & FTPS_CONTROL_CONNECTED))
-	{
-		log_error("ftp_receive:ftp_server not connected.");
-		return -1;
-	}
 
 	int flags=0,
 		buff_size=0,//total number of bytes received

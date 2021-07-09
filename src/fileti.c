@@ -37,6 +37,9 @@ void s_login(struct ftp_server **,struct com_com *);
 void s_ls(struct ftp_server **,struct ftp_fs **);
 void l_ls(struct ftp_fs **,char **);
 
+void l_pwd(struct ftp_fs **,char **);
+
+void s_rtr(struct ftp_server **,struct com_com *);
 
 void l_enter_dir(struct ftp_fs **,struct ftp_file *,int *,char *);
 void s_enter_dir(struct ftp_fs **,struct ftp_file *,int *,struct ftp_server *);
@@ -75,8 +78,6 @@ int main()
 
 	int    selside = 0;
 
-	char   *lwd=NULL;//local working dir
-
 	char   *cbuff=NULL;//command buffer
 
 	char   *rawbuff=NULL;
@@ -89,8 +90,9 @@ int main()
 	//default select left
 	csel = &sell;
 
-	
-	l_ls(&lfs,&lwd);
+
+	//curr local dir	
+	l_pwd(&lfs,&(lfs->pwd));
 
 
 
@@ -142,7 +144,13 @@ int main()
 		if(c==' ' && 
 			ftps != NULL  && ftps->server_status & FTPS_CONTROL_CONNECTED)
 				csel = csel == &sell?&sels:&sell;
-	
+
+		if(c=='r')
+			if(selside==1 && sifi)
+			{
+				ftpd_retrieve(ftps,sifi->name,sifi->name);
+				l_ls(&lfs,&(lfs->pwd));
+			}
 
 		if(c=='z')
 			csel = csel == &selr?&sell:&selr;
@@ -154,7 +162,7 @@ int main()
 			if(selside==1)//server
 				s_enter_dir(&sfs,sifi,&rof,ftps);
 			else if(!selside)//local
-				l_enter_dir(&lfs,lifi,&lof,lwd);
+				l_enter_dir(&lfs,lifi,&lof,lfs->pwd);
 		}
 	
 
@@ -172,6 +180,31 @@ int main()
 					s_login(&ftps,comic);
 					s_ls(&ftps,&sfs);
 				}
+				if(!strcmp(comic->command,"ls"))
+				{	
+					if(selside==1)
+						s_ls(&ftps,&sfs);
+					if(!selside)
+						l_ls(&lfs,&(lfs->pwd));
+
+				}
+				if(!strcmp(comic->command,"wd"))
+				{	
+					l_pwd(&lfs,&(lfs->pwd));
+
+				}
+				if(!strcmp(comic->command,"rtr"))
+				{	
+					if(selside==1)
+					{
+						s_rtr(&ftps,comic);
+						l_ls(&lfs,&(lfs->pwd));
+					}
+				}
+
+
+
+
 			}
 			
 		}
@@ -181,8 +214,7 @@ int main()
 		////
 		refresh();
 		clear();
-		msleep(5);	
-		
+		msleep(50);		
 
 
 
@@ -196,7 +228,6 @@ int main()
 	if(lfs)
 		ftp_fs_free(lfs);
 
-	free(lwd);
 	
 	return 0;
 
@@ -214,7 +245,29 @@ void l_enter_dir(struct ftp_fs **ftfs,struct ftp_file *fifi,int *off,char *lwd)
 		return;
 	}
 
-	strcat(lwd,"/");
+	if(!strcmp(fifi->name,"."))//stay where you are
+		return;
+
+	if(!strcmp(fifi->name,".."))//back one dir
+	{
+		if(strlen(lwd)==1)return;
+
+		char *ep,*sp;
+		sp = lwd;
+		do{
+			ep = strchr(sp+1,'/');
+			if(!ep)
+				break;
+			sp = ep;
+		
+		}while(1);
+		if(sp==lwd)sp++;
+		*sp = '\0';
+		io_list(ftfs,lwd);
+		return;
+	}
+
+	if(strlen(lwd)!=1)strcat(lwd,"/");
 	strcat(lwd,fifi->name);
 	io_list(ftfs,lwd);
 
@@ -249,8 +302,10 @@ void s_connect(struct ftp_server **ftps,struct com_com *comic)
 		
 	if(*ftps &&
 	    ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED,"s_connect"))
+	{
+		log_raw("already connected. ",1);
 		return;
-
+	}
 
 	char *ip,
 		*port;
@@ -299,8 +354,39 @@ void s_ls(struct ftp_server **ftps,struct ftp_fs **ftfs)
 
 void l_ls(struct ftp_fs **ftfs,char **lwd)
 {
-	io_pwd(lwd);
-	io_list(ftfs,*lwd);
+	io_list(ftfs,(*ftfs)->pwd);
+}
+
+void l_pwd(struct ftp_fs **ftfs,char **lwd)
+{
+	char buff[512];
+
+	io_pwd(buff);
+	io_list(ftfs,buff);
 
 }
 
+void s_rtr(struct ftp_server **ftps,struct com_com *comic)
+{
+	if(!(*ftps) ||
+	    !ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED |
+						FTPS_LOGGED_IN,"s_rtr"))
+		return;
+
+
+
+
+	char *src_name,
+		*dst_name;
+
+	if(!(comic->args) || !(comic->args->next))
+		return;
+
+	src_name = comic->args->arg;
+	dst_name = comic->args->next->arg;
+
+
+	ftpd_retrieve(*ftps,src_name,dst_name);
+
+
+}

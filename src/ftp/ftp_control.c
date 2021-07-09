@@ -377,6 +377,10 @@ int ftpc_connect(struct ftp_server *ftps)
 	//-1- failed
 
 
+
+	log_raw("establishing control connection...",1);
+	log_raw(ftps->cc_info->ai_canonname,1);
+
 	if(ftps->server_status & FTPS_CONTROL_CONNECTED)
 	{
 		log_warning("ftpc_connect:ftp_server already connected.");
@@ -389,7 +393,6 @@ int ftpc_connect(struct ftp_server *ftps)
 		return -1;
 	}
 
-	ftps->server_status |= FTPS_CONTROL_CONNECTED;
 
 	//welcome message
 	char *buff;
@@ -405,6 +408,8 @@ int ftpc_connect(struct ftp_server *ftps)
 		log_warning("ftpc_connect: ftp_receive read nothing. ");
 		return -1;
 	}
+	
+	ftps->server_status |= FTPS_CONTROL_CONNECTED;
 
 	buff[response_size-1]='\0';
 	log_raw(buff,0);

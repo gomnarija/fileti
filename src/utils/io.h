@@ -33,6 +33,6 @@
 int io_write(const char *,const char *,int);
 int io_read(const char *,char **,int *,FILE **);
 int io_list(struct ftp_fs **,const char *);
-int io_pwd(char **);
+int io_pwd(char *);
 
 #endif

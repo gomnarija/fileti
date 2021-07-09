@@ -128,15 +128,11 @@ int io_list(struct ftp_fs **ftfs,const char *dir_name)
 	return 0;
 }
 
-int io_pwd(char **buff)
+int io_pwd(char *buff)
 {
-	if((*buff = (char *)malloc(PATH_MAX)) == NULL)
-		return -1;
 
-
-	if(getcwd(*buff,PATH_MAX) == NULL)
+	if(getcwd(buff,PATH_MAX) == NULL)
 	{
-		free(*buff);
 		return -1;
 	}
 	return 0;
