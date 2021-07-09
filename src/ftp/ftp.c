@@ -199,6 +199,27 @@ int ftp_send(struct ftp_server *ftps,int socket_fd,const char *msg,const int siz
 		return -1;
 	}
 	
+	struct pollfd pfd;
+	pfd.fd = socket_fd;
+	pfd.events = POLLOUT;//writing possible
+	pfd.revents = 0;
+	//wait for the connection
+	int rt = poll(&pfd,1,FTP_TIMEOUT);
+	if(rt == 0)//timedout
+	{
+		log_error("ftp_send: connection timed out.");
+		return -1;
+	}
+	if(rt == -1)
+	{
+		char buf[16];
+		sprintf(buf,"errno: %d",errno);
+		log_error("ftp_send: poll() failed.");
+		log_error(buf);
+		return -1;
+	}
+
+
 
 	int flags = 0,bytes_sent;
 
