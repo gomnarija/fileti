@@ -28,6 +28,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "unistd.h"
+#include "sys/stat.h"
 
 
 
@@ -37,11 +38,19 @@ void s_login(struct ftp_server **,struct com_com *);
 void s_ls(struct ftp_server **,struct ftp_fs **);
 void l_ls(struct ftp_fs **,char **);
 
+
+void s_rm(struct ftp_server **,struct com_com *);
+void l_rm(struct com_com *);
+void s_rmdir(struct ftp_server **,struct com_com *);
+void l_rmdir(struct com_com *);
+
+
+
 void l_pwd(struct ftp_fs **,char **);
 
 void s_rtr(struct ftp_server **,struct com_com *);
 
-void l_enter_dir(struct ftp_fs **,struct ftp_file *,int *,char *);
+void l_enter_dir(struct ftp_fs **,struct ftp_file *,int *);
 void s_enter_dir(struct ftp_fs **,struct ftp_file *,int *,struct ftp_server *);
 
 
@@ -79,7 +88,6 @@ int main()
 	int    selside = 0;
 
 	char   *cbuff=NULL;//command buffer
-
 	char   *rawbuff=NULL;
 
 	
@@ -130,7 +138,7 @@ int main()
 	
 
 
-		//
+		//keys
 		int c = getch();
 		
 		if(c=='q')
@@ -142,8 +150,9 @@ int main()
 			(*csel)++;
 	
 		if(c==' ' && 
-			ftps != NULL  && ftps->server_status & FTPS_CONTROL_CONNECTED)
-				csel = csel == &sell?&sels:&sell;
+			ftps != NULL  && 
+				ftps->server_status & FTPS_CONTROL_CONNECTED)
+			csel = csel == &sell?&sels:&sell;
 
 		if(c=='r')
 			if(selside==1 && sifi)
@@ -157,12 +166,26 @@ int main()
 
 
 
+		if(c=='d')
+		{
+			if(selside==1)//server
+			{
+				ftpc_rm(ftps,sifi->name);
+				s_ls(&ftps,&sfs);
+			}
+			else if(!selside)//local
+			{
+				remove(lifi->name);
+				l_ls(&lfs,&(lfs->pwd));
+			}
+		}
+	
 		if(c=='e')
 		{
 			if(selside==1)//server
 				s_enter_dir(&sfs,sifi,&rof,ftps);
 			else if(!selside)//local
-				l_enter_dir(&lfs,lifi,&lof,lfs->pwd);
+				l_enter_dir(&lfs,lifi,&lof);
 		}
 	
 
@@ -201,6 +224,33 @@ int main()
 						l_ls(&lfs,&(lfs->pwd));
 					}
 				}
+				if(!strcmp(comic->command,"rm"))
+				{	
+					if(selside==1)
+					{
+						s_rm(&ftps,comic);
+						s_ls(&ftps,&sfs);
+					}
+					else if(!selside)
+					{
+						l_rm(comic);
+						l_ls(&lfs,&(lfs->pwd));	
+					}
+				}
+				if(!strcmp(comic->command,"rmdir"))
+				{	
+					if(selside==1)
+					{
+						s_rmdir(&ftps,comic);
+						s_ls(&ftps,&sfs);
+					}
+					else if(!selside)
+					{
+						l_rmdir(comic);
+						l_ls(&lfs,&(lfs->pwd));	
+					}
+				}
+
 
 
 
@@ -214,7 +264,7 @@ int main()
 		////
 		refresh();
 		clear();
-		msleep(50);		
+		msleep(25);		
 
 
 
@@ -236,7 +286,7 @@ int main()
 }
 
 
-void l_enter_dir(struct ftp_fs **ftfs,struct ftp_file *fifi,int *off,char *lwd)
+void l_enter_dir(struct ftp_fs **ftfs,struct ftp_file *fifi,int *off)
 {
 	if(!strcmp(fifi->type,"file"))
 	{
@@ -244,32 +294,11 @@ void l_enter_dir(struct ftp_fs **ftfs,struct ftp_file *fifi,int *off,char *lwd)
 		log_warning(fifi->name);
 		return;
 	}
+	
+	chdir(fifi->name);
+	l_pwd(ftfs,&((*ftfs)->pwd));
+	io_list(ftfs,(*ftfs)->pwd);
 
-	if(!strcmp(fifi->name,"."))//stay where you are
-		return;
-
-	if(!strcmp(fifi->name,".."))//back one dir
-	{
-		if(strlen(lwd)==1)return;
-
-		char *ep,*sp;
-		sp = lwd;
-		do{
-			ep = strchr(sp+1,'/');
-			if(!ep)
-				break;
-			sp = ep;
-		
-		}while(1);
-		if(sp==lwd)sp++;
-		*sp = '\0';
-		io_list(ftfs,lwd);
-		return;
-	}
-
-	if(strlen(lwd)!=1)strcat(lwd,"/");
-	strcat(lwd,fifi->name);
-	io_list(ftfs,lwd);
 
 	*off = 0;
 }
@@ -359,7 +388,7 @@ void l_ls(struct ftp_fs **ftfs,char **lwd)
 
 void l_pwd(struct ftp_fs **ftfs,char **lwd)
 {
-	char buff[512];
+	char buff[PATH_MAX];
 
 	io_pwd(buff);
 	io_list(ftfs,buff);
@@ -390,3 +419,85 @@ void s_rtr(struct ftp_server **ftps,struct com_com *comic)
 
 
 }
+void s_rm(struct ftp_server **ftps,struct com_com *comic)
+{
+	if(!(*ftps) ||
+	    !ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED |
+						FTPS_LOGGED_IN,"s_rm"))
+		return;
+
+
+
+	char *name;
+
+	if(!(comic->args))
+		return;
+
+	name = comic->args->arg;
+
+
+	ftpc_rm(*ftps,name);
+
+
+}
+void l_rm(struct com_com *comic)
+{
+
+	char *name;
+
+	if(!(comic->args))
+		return;
+
+
+	struct stat ss;
+
+	name = comic->args->arg;
+
+	stat(name,&ss);
+	if(S_ISDIR(ss.st_mode))
+		return;
+	
+	remove(name);
+
+}
+void s_rmdir(struct ftp_server **ftps,struct com_com *comic)
+{
+	if(!(*ftps) ||
+	    !ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED |
+						FTPS_LOGGED_IN,"s_rm"))
+		return;
+
+
+
+	char *name;
+
+	if(!(comic->args))
+		return;
+
+	name = comic->args->arg;
+
+
+	ftpc_rmdir(*ftps,name);
+
+
+}
+void l_rmdir(struct com_com *comic)
+{
+
+	char *name;
+
+	if(!(comic->args))
+		return;
+
+
+	struct stat ss;
+
+	name = comic->args->arg;
+
+	stat(name,&ss);
+	if(!S_ISDIR(ss.st_mode))
+		return;
+
+	rmdir(name);
+}
+

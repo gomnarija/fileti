@@ -191,7 +191,7 @@ int parse_mlsx(char *buffer,struct ftp_file **fifi)
 int ftpd_list(struct ftp_server *ftps,struct ftp_fs *ftfs,const char *dir)
 {
 	//MLSD command, fills ftp_fs
-	//sends LIST command,waits for server to confirm that data connection is closed
+	//sends MLSD command,waits for server to confirm that data connection is closed
 	//return value
 	//0 -success
 	//-1-failed
