@@ -3,6 +3,7 @@ FTP client :) <br>
   !!!program still in development.!!!<br>
 
 <p align="center"><img src="https://github.com/gomnarija/fileTI/blob/master/ss/example_1.png" alt="example" width=500 height=360 /></p>
+
 ## Installation
 
 ```sh
