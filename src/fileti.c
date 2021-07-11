@@ -49,6 +49,7 @@ void l_rmdir(struct com_com *);
 void l_pwd(struct ftp_fs **,char **);
 
 void s_rtr(struct ftp_server **,struct com_com *);
+void s_snd(struct ftp_server **,struct com_com *);
 
 void l_enter_dir(struct ftp_fs **,struct ftp_file *,int *);
 void s_enter_dir(struct ftp_fs **,struct ftp_file *,int *,struct ftp_server *);
@@ -179,7 +180,16 @@ int main()
 				l_ls(&lfs,&(lfs->pwd));
 			}
 		}
-	
+		
+		if(c=='s')
+		{
+			if(!selside)//local
+			{
+				ftpd_store_file(ftps,sifi->name,sifi->name);
+				s_ls(&ftps,&sfs);
+				
+			}
+		}
 		if(c=='e')
 		{
 			if(selside==1)//server
@@ -218,11 +228,8 @@ int main()
 				}
 				if(!strcmp(comic->command,"rtr"))
 				{	
-					if(selside==1)
-					{
-						s_rtr(&ftps,comic);
-						l_ls(&lfs,&(lfs->pwd));
-					}
+					s_rtr(&ftps,comic);
+					l_ls(&lfs,&(lfs->pwd));
 				}
 				if(!strcmp(comic->command,"rm"))
 				{	
@@ -250,7 +257,11 @@ int main()
 						l_ls(&lfs,&(lfs->pwd));	
 					}
 				}
-
+				if(!strcmp(comic->command,"send"))
+				{	
+					s_snd(&ftps,comic);
+					s_ls(&ftps,&sfs);	
+				}
 
 
 
@@ -365,7 +376,8 @@ void s_login(struct ftp_server **ftps,struct com_com *comic)
 	user = comic->args->arg;
 	password = comic->args->next->arg;
 
-	ftpc_login(*ftps,user,password);
+	if(!ftpc_login(*ftps,user,password))
+		ftpc_type(*ftps,FTP_TYPE_BINARY);//temp i guess
 
 }
 void s_ls(struct ftp_server **ftps,struct ftp_fs **ftfs)
@@ -499,5 +511,27 @@ void l_rmdir(struct com_com *comic)
 		return;
 
 	rmdir(name);
+}
+void s_snd(struct ftp_server **ftps,struct com_com *comic)
+{
+	if(!(*ftps) ||
+	    !ftp_check_server_status(*ftps,FTPS_CONTROL_CONNECTED |
+						FTPS_LOGGED_IN,"s_snd"))
+		return;
+
+
+
+	char *src_name,
+		*dst_name;
+
+	if(!(comic->args) || !(comic->args->next))
+		return;
+
+	src_name = comic->args->arg;
+	dst_name = comic->args->next->arg;
+
+	ftpd_store_file(*ftps,src_name,dst_name);
+
+
 }
 
