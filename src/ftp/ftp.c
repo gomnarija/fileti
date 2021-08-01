@@ -258,14 +258,14 @@ int ftp_receive(struct ftp_server *ftps,int socket_fd, char **buffer,int *rc)
 	memset(*buffer,0,rcv_size);
 
 	int prt;
-	
+
+
+
 	//check if there is something to be read
-	prt=poll(&pfd,1,FTP_TIMEOUT);
+	prt=poll(&pfd,1,500);
 	if(prt == 0 || !(pfd.revents & POLLIN))//timedout or nothing to read
 	{
-
-		log_error("ftp_receive: nothing to receive.");
-		return -1;
+		return -2;
 	}
 	else if(prt == -1)
 	{
@@ -339,11 +339,11 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	//-1- failed
 
 	
-	char *response;//raw response string, returned from ftp_receive
+	char *response=NULL;//raw response string, returned from ftp_receive
 	struct ftp_response *curr_res;
 
 	*fres = NULL; 
-	int response_size=-1;	
+	int response_size=0;	
 
 	if((curr_res = (struct ftp_response*)malloc(sizeof(struct ftp_response))) == NULL)
 	{
@@ -371,18 +371,31 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 	if(command)free(command);
 
 	
-	int rcv;
-	if((rcv = ftp_receive(ftps,ftps->cc_socket,&response,&response_size)) == -1)
-	{
 	
-		log_error("ftp_command: ftp_receive() failed.");
-		return -1;
-	}
-	else if(rcv == -2)
+	char *buff;
+	int buff_size=-1;
+	int rcv=0;
+	while(rcv!=-2)
 	{
-		log_warning("ftp_command: ftp_receive() read nothing. ");
-		return -1;
+		if((rcv = ftp_receive(ftps,ftps->cc_socket,&buff,&buff_size)) == -1)
+		{
+	
+			log_error("ftp_command: ftp_receive() failed.");
+			return -1;
+		}
+
+		if((response = (char*) realloc(response,response_size+buff_size))==NULL)
+		{	
+			log_error("ftp_command: realloc() failed.");
+				return -1;
+		}
+		
+		memcpy(response+response_size,buff,buff_size);
+		response_size += buff_size;
+		free(buff);
+
 	}
+
 
 	log_raw("<",0);	
 	log_raw(response,1);

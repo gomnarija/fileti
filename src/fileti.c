@@ -390,7 +390,10 @@ void s_ls(struct ftp_server **ftps,struct ftp_fs **ftfs)
 	if(!ftpc_pwd(*ftps,ftfs) &&
 		!ftpd_list(*ftps,*ftfs,""))
 		return;
-
+	else
+	{
+		*ftfs = NULL;
+	}
 }
 
 void l_ls(struct ftp_fs **ftfs,char **lwd)

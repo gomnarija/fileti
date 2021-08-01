@@ -34,11 +34,11 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 	//return value:
 	//0 - success
 	//-1 - failed
-	
+	//-2 - anon login	
 	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_user"))
 		return -1;
 	
-	struct ftp_response *fres;
+	struct ftp_response *fres,*cc;
 	
 	char *command_str;
 	if(ftp_command_str(&command_str,"USER",user_name) == -1)
@@ -50,13 +50,20 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 		ftp_response_free(fres);
 		return -1;
 	}
-
+	
 
 	if(fres->code == FTPC_USER_OK)
 	{
 		log_message("ftpc_user: success.");	
 		ftp_response_free(fres);
 		return 0;
+	}
+	else if(fres->code == FTPC_LOGGED_IN)
+	{
+		log_message("ftpc_user: anon login success.");	
+		ftp_response_free(fres);
+		ftps->server_status |= FTPS_LOGGED_IN;		
+		return -2;
 	}
 	else
 	{
@@ -131,11 +138,11 @@ int ftpc_login(struct ftp_server *ftps,const char *user_name,const char *passwor
 	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_login"))
 		return -1;
 	
-	
-	if(ftpc_user(ftps,user_name)==-1)
+	int res;
+	if((res = ftpc_user(ftps,user_name))==-1)
 		return -1;
 
-	return ftpc_password(ftps,password);
+	return res ==  -2 ? 0 : ftpc_password(ftps,password);
 
 
 }
@@ -412,7 +419,7 @@ int ftpc_connect(struct ftp_server *ftps)
 	ftps->server_status |= FTPS_CONTROL_CONNECTED;
 
 	buff[response_size-1]='\0';
-	log_raw(buff,0);
+	log_raw(buff,1);
 	free(buff);
 
 
