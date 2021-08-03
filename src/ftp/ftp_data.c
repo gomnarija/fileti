@@ -104,7 +104,7 @@ int ftpd_disconnect(struct ftp_server *ftps)
 
 	
 	
-	/*char *buffer;
+	char *buffer;
 	int response_size = -1;
 	
 	int rcv;
@@ -127,7 +127,7 @@ int ftpd_disconnect(struct ftp_server *ftps)
 		free(buffer);
                 return -1;
 	}
-	*/
+	
 
 	ftps->server_status ^= FTPS_DATA_CONNECTED;
 
@@ -136,7 +136,7 @@ int ftpd_disconnect(struct ftp_server *ftps)
 	pthread_join(ftps->dc_thread,NULL);
 	ftps->dc_thread = 0;	
 
-	//free(buffer);
+	free(buffer);
 
 	log_message("ftpd_disconnect: data connection stopped. ");
 

@@ -38,7 +38,7 @@ int ftpc_user(struct ftp_server *ftps,const char *user_name)
 	if(!ftp_check_server_status(ftps,FTPS_CONTROL_CONNECTED,"ftpc_user"))
 		return -1;
 	
-	struct ftp_response *fres,*cc;
+	struct ftp_response *fres;
 	
 	char *command_str;
 	if(ftp_command_str(&command_str,"USER",user_name) == -1)

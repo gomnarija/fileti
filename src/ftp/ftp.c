@@ -394,12 +394,15 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		response_size += buff_size;
 		free(buff);
 
+
+		//check if response is multi-line
+		if(response[3]!='-')
+			break;
+
 	}
 
 
-	log_raw("<",0);	
-	log_raw(response,1);
-		
+	
 	//first 3 characters of the response are 
 	// digits representing FTP response code,rest is the response text
 
@@ -414,7 +417,10 @@ int ftp_command(struct ftp_server *ftps,struct ftp_response **fres,char *command
 		return -1;
 	}
 	response[response_size++] = '\0';
-
+	
+	log_raw("<",0);	
+	log_raw(response,1);
+		
 
 
 	char *curr_line,
